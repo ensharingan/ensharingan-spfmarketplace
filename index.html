@@ -64,10 +64,10 @@ nav{background:var(--blue);padding:0 1.5rem;display:flex;align-items:center;gap:
 .hero{background:linear-gradient(135deg,var(--blue) 0%,#2568c4 50%,var(--blue2) 100%);padding:3.5rem 1.5rem 2.75rem;position:relative;overflow:hidden}
 .hero::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");pointer-events:none}
 .hero-inner{max-width:1200px;margin:0 auto;position:relative;z-index:1}
-.hero-layout{display:grid;grid-template-columns:1fr 480px;gap:2.5rem;align-items:center}
-.hero-banner-wrap{border-radius:var(--rxl);overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.35);border:2px solid rgba(255,255,255,.15);flex-shrink:0}
-.hero-banner-img{width:100%;display:block;border-radius:var(--rl)}
-@media(max-width:900px){.hero-layout{grid-template-columns:1fr}.hero-banner-wrap{display:none}}
+.hero-layout{display:grid;grid-template-columns:1fr 440px;gap:2.5rem;align-items:center}
+.hero-banner-wrap{border-radius:var(--rxl);overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.35);border:2px solid rgba(255,255,255,.15)}
+.hero-banner-img{width:100%;display:block}
+@media(max-width:960px){.hero-layout{grid-template-columns:1fr}.hero-banner-wrap{display:none}}
 .hero-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:20px;padding:4px 14px;font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.85);margin-bottom:1rem}
 .hero h1{font-family:var(--font-h);font-size:clamp(2.4rem,5vw,3.8rem);font-weight:900;line-height:1.02;text-transform:uppercase;letter-spacing:-.01em;color:#fff;margin-bottom:.6rem}
 .hero h1 .red{color:#ffdd44}
@@ -366,7 +366,7 @@ footer{background:var(--blue3);padding:2rem 1.5rem 1.25rem;margin-top:3rem}
   <div class="topbar-text">🇿🇦 South Africa's #1 Auto Parts Marketplace</div>
   <div class="topbar-right">
     <span class="topbar-link" onclick="gotoView('contact',null)">📞 +27 11 000 0000</span>
-    <span class="topbar-link" onclick="gotoView('contact',null)">✉️ <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="96fef3fafaf9d6e5e6f7e4f3e6f7e4e2e5f0fff8f2f3e4b8f5f9b8ecf7">[email&#160;protected]</a></span>
+    <span class="topbar-link" onclick="gotoView('contact',null)">✉️ hello@sparepartsfinder.co.za</span>
   </div>
 </div>
 
@@ -404,26 +404,26 @@ footer{background:var(--blue3);padding:2rem 1.5rem 1.25rem;margin-top:3rem}
         <h1>Find Your <span class="red">Spare Part</span><br>Right Here</h1>
         <p class="hero-sub">New, used &amp; salvage parts from verified local sellers — delivered nationwide or collect directly.</p>
         <div class="search-card">
-          <div class="search-row">
-            <div class="search-input-wrap">
-              <svg viewBox="0 0 24 24"><path d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
-              <input class="search-main" id="main-search" type="text" placeholder="Search by part name, SKU, make, model or VIN…" oninput="applyFilters()">
-            </div>
-            <select class="search-select" id="qs-make" onchange="updateQsModels();applyFilters()"><option value="">All Makes</option></select>
-            <select class="search-select" id="qs-model" onchange="applyFilters()"><option value="">All Models</option></select>
-            <select class="search-select" id="qs-year" onchange="applyFilters()"><option value="">Any Year</option></select>
-            <button class="search-go" onclick="applyFilters()">Search</button>
-          </div>
+      <div class="search-row">
+        <div class="search-input-wrap">
+          <svg viewBox="0 0 24 24"><path d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+          <input class="search-main" id="main-search" type="text" placeholder="Search by part name, SKU, make, model or VIN…" oninput="applyFilters()">
         </div>
-        <div class="hero-stats">
-          <div class="hero-stat"><strong id="stat-listing-count">2,400+</strong> Active Listings</div>
-          <div class="hero-stat"><strong>380+</strong> Verified Sellers</div>
-          <div class="hero-stat"><strong>20 Makes</strong> All Covered</div>
-          <div class="hero-stat"><strong>WhatsApp</strong> Same-Day Response</div>
+        <select class="search-select" id="qs-make" onchange="updateQsModels();applyFilters()"><option value="">All Makes</option></select>
+        <select class="search-select" id="qs-model" onchange="applyFilters()"><option value="">All Models</option></select>
+        <select class="search-select" id="qs-year" onchange="applyFilters()"><option value="">Any Year</option></select>
+        <button class="search-go" onclick="applyFilters()">Search</button>
+      </div>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat"><strong id="stat-listing-count">2,400+</strong> Active Listings</div>
+      <div class="hero-stat"><strong>380+</strong> Verified Sellers</div>
+      <div class="hero-stat"><strong>20 Makes</strong> All Covered</div>
+      <div class="hero-stat"><strong>WhatsApp</strong> Same-Day Response</div>
         </div>
       </div>
       <div class="hero-banner-wrap">
-        <img class="hero-banner-img" src="https://raw.githubusercontent.com/ensharingan/ensharingan-spfmarketplace/main/banner.jpg" alt="Spare Parts Finder — Used Auto Parts Marketplace" onerror="this.parentElement.style.display='none'">
+        <img class="hero-banner-img" src="banner.jpg" alt="Spare Parts Finder — Used Auto Parts Marketplace">
       </div>
     </div>
   </div>
@@ -598,7 +598,7 @@ footer{background:var(--blue3);padding:2rem 1.5rem 1.25rem;margin-top:3rem}
           <div style="display:flex;flex-direction:column;gap:8px">
             <div style="display:flex;align-items:center;gap:10px;padding:9px;background:var(--bg2);border-radius:var(--r);border:1px solid var(--border)"><span style="font-size:15px">📞</span><div><div style="font-size:10px;color:var(--text3);font-family:var(--font-h);text-transform:uppercase;letter-spacing:.08em">Call Us</div><div style="font-weight:600;font-size:14px">+27 11 000 0000</div></div></div>
             <div style="display:flex;align-items:center;gap:10px;padding:9px;background:var(--bg2);border-radius:var(--r);border:1px solid var(--border)"><span style="font-size:15px">💬</span><div><div style="font-size:10px;color:var(--text3);font-family:var(--font-h);text-transform:uppercase;letter-spacing:.08em">WhatsApp</div><div style="font-weight:600;font-size:14px">+27 82 000 0000</div></div></div>
-            <div style="display:flex;align-items:center;gap:10px;padding:9px;background:var(--bg2);border-radius:var(--r);border:1px solid var(--border)"><span style="font-size:15px">✉️</span><div><div style="font-size:10px;color:var(--text3);font-family:var(--font-h);text-transform:uppercase;letter-spacing:.08em">Email</div><div style="font-weight:600;font-size:14px"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="b7dfd2dbdbd8f7c4c7d6c5d2c7d6c5c3c4d1ded9d3d2c599d4d899cdd6">[email&#160;protected]</a></div></div></div>
+            <div style="display:flex;align-items:center;gap:10px;padding:9px;background:var(--bg2);border-radius:var(--r);border:1px solid var(--border)"><span style="font-size:15px">✉️</span><div><div style="font-size:10px;color:var(--text3);font-family:var(--font-h);text-transform:uppercase;letter-spacing:.08em">Email</div><div style="font-weight:600;font-size:14px">hello@sparepartsfinder.co.za</div></div></div>
           </div>
         </div>
       </div>
@@ -805,7 +805,7 @@ footer{background:var(--blue3);padding:2rem 1.5rem 1.25rem;margin-top:3rem}
         <div class="footer-col-title">Contact</div>
         <span class="footer-link">📞 +27 11 000 0000</span>
         <span class="footer-link">💬 +27 82 000 0000 (WhatsApp)</span>
-        <span class="footer-link">✉️ <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="fc9499909093bc8f8c9d8e998c9d8e888f9a959298998ed29f93d2869d">[email&#160;protected]</a></span>
+        <span class="footer-link">✉️ hello@sparepartsfinder.co.za</span>
         <span class="footer-link">📍 Johannesburg, Gauteng</span>
       </div>
     </div>
@@ -921,16 +921,16 @@ footer{background:var(--blue3);padding:2rem 1.5rem 1.25rem;margin-top:3rem}
 
 <div class="toast" id="toast"></div>
 
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+<script>
 // ══════════════════════════════════════════════════════════════
 //  CONFIG — Replace with your real Supabase + Cloudinary values
 //  Supabase: Project Settings → API
 //  Cloudinary: cloudinary.com → Dashboard → Cloud Name
 // ══════════════════════════════════════════════════════════════
 const SUPABASE_URL    = 'https://ycoclceordqbeumeujzf.supabase.co';
-const SUPABASE_ANON   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inljb2NsY2VvcmRxYmV1bWV1anpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3OTYyODQsImV4cCI6MjA5MDM3MjI4NH0.C2WvWR1MVMWJPJ6fHgcuEZLNC3HeElYsFjWSTFhrmzo';  // your full anon key
-const CLOUDINARY_CLOUD  = 'dnr82g2yo';   // leave this for now
-const CLOUDINARY_PRESET = 'spf_unsigned';       // leave this for now
+const SUPABASE_ANON   = 'YOUR_ANON_PUBLIC_KEY';
+const CLOUDINARY_CLOUD  = 'dnr82g2yo';
+const CLOUDINARY_PRESET = 'spf_unsigned';  // create this in Cloudinary → Settings → Upload Presets
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
@@ -1119,7 +1119,7 @@ async function submitEnquiry() {
 // ══════════════════════════════════════════════════════════════
 async function handleImageFiles(files) {
   if (!files || !files.length) return;
-  if (CLOUDINARY_CLOUD === 'YOUR_CLOUD_NAME') { showToast('Add your Cloudinary cloud name to enable photo uploads.'); return; }
+  if (!CLOUDINARY_CLOUD || CLOUDINARY_CLOUD === 'YOUR_CLOUD_NAME') { showToast('Add your Cloudinary cloud name to enable photo uploads.'); return; }
   showToast('Uploading ' + files.length + ' photo(s)…');
   for (const file of Array.from(files)) {
     const fd = new FormData();
@@ -1536,4 +1536,16 @@ function updateQsModels(){
 function updateListModel(){
   const make=document.getElementById('list-make').value, sel=document.getElementById('list-model');
   sel.innerHTML='<option value="">All Models</option>';
-  if(make&&SA_VEHICLE_DATA[make])SA_VEHICLE_DATA[make].forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;sel.appendC
+  if(make&&SA_VEHICLE_DATA[make])SA_VEHICLE_DATA[make].forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;sel.appendChild(o);});
+}
+
+// ══════════════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════════════
+populateDropdowns();
+wireUploadArea();
+loadListings();
+checkSession();
+</script>
+</body>
+</html>
