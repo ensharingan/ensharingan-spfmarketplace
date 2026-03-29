@@ -918,7 +918,7 @@ footer{background:var(--blue3);padding:2rem 1.5rem 1.25rem;margin-top:3rem}
 // ══════════════════════════════════════════════════════════════
 const SUPABASE_URL    = 'https://ycoclceordqbeumeujzf.supabase.co';
 const SUPABASE_ANON   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inljb2NsY2VvcmRxYmV1bWV1anpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3OTYyODQsImV4cCI6MjA5MDM3MjI4NH0.C2WvWR1MVMWJPJ6fHgcuEZLNC3HeElYsFjWSTFhrmzo';  // your full anon key
-const CLOUDINARY_CLOUD  = 'YOUR_CLOUD_NAME';   // leave this for now
+const CLOUDINARY_CLOUD  = 'dnr82g2yo';   // leave this for now
 const CLOUDINARY_PRESET = 'spf_unsigned';       // leave this for now
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
@@ -1108,7 +1108,7 @@ async function submitEnquiry() {
 // ══════════════════════════════════════════════════════════════
 async function handleImageFiles(files) {
   if (!files || !files.length) return;
-  if (CLOUDINARY_CLOUD === 'YOUR_CLOUD_NAME') { showToast('Add your Cloudinary cloud name to enable photo uploads.'); return; }
+  if (CLOUDINARY_CLOUD === 'dnr82g2yo') { showToast('Add your Cloudinary cloud name to enable photo uploads.'); return; }
   showToast('Uploading ' + files.length + ' photo(s)…');
   for (const file of Array.from(files)) {
     const fd = new FormData();
