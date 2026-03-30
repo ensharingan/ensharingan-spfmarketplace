@@ -23,43 +23,8 @@
       "purpose": "maskable"
     }
   ],
-  "screenshots": [
-    {
-      "src": "https://res.cloudinary.com/dnr82g2yo/image/upload/v1774891962/Spare-Parts-Finder-Market-Banner-1920x780-5_b3v3wk.jpg",
-      "sizes": "1920x780",
-      "type": "image/jpeg",
-      "form_factor": "wide",
-      "label": "Spare Parts Finder Marketplace"
-    }
-  ],
   "categories": [
     "shopping",
     "automotive"
-  ],
-  "shortcuts": [
-    {
-      "name": "Browse Parts",
-      "short_name": "Browse",
-      "description": "Search and browse auto parts",
-      "url": "/?view=browse",
-      "icons": [
-        {
-          "src": "https://res.cloudinary.com/dnr82g2yo/image/upload/Untitled_1080_x_1080_px_ojvxhe.png",
-          "sizes": "512x512"
-        }
-      ]
-    },
-    {
-      "name": "Sell a Part",
-      "short_name": "Sell",
-      "description": "List a part for sale",
-      "url": "/?view=list",
-      "icons": [
-        {
-          "src": "https://res.cloudinary.com/dnr82g2yo/image/upload/Untitled_1080_x_1080_px_ojvxhe.png",
-          "sizes": "512x512"
-        }
-      ]
-    }
   ]
 }
