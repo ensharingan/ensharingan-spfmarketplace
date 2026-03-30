@@ -1543,7 +1543,7 @@ function updateQsModels(){
 function updateListModel(){
   const make=document.getElementById('list-make').value, sel=document.getElementById('list-model');
   sel.innerHTML='<option value="">All Models</option>';
-  if(make&&SA_VEHICLE_DATA[make])SA_VEHICLE_DATA[make].forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;'option');o.value=m;o.textContent=m;sel.appendChild(o); });
+  if(make&&SA_VEHICLE_DATA[make])SA_VEHICLE_DATA[make].forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;sel.appendChild(o);});
 }
 
 // ══════════════════════════════════════════════════════════════
