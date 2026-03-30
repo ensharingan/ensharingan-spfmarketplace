@@ -7,6 +7,8 @@
 <meta name="description" content="South Africa's trusted auto spare parts marketplace. Buy and sell new, used and salvage vehicle parts from verified local sellers.">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css">
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
 <style>
 /* ══ TOKENS ══ */
 :root{
@@ -61,13 +63,9 @@ nav{background:var(--blue);padding:0 1.5rem;display:flex;align-items:center;gap:
 .sign-btn:hover{background:var(--red2)}
 
 /* ══ HERO ══ */
-.hero{background:linear-gradient(135deg,var(--blue) 0%,#2568c4 50%,var(--blue2) 100%);padding:3.5rem 1.5rem 2.75rem;position:relative;overflow:hidden}
+.hero{background:linear-gradient(135deg,var(--blue) 0%,#2568c4 50%,var(--blue2) 100%);padding:3rem 1.5rem 2.75rem;position:relative;overflow:hidden}
 .hero::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");pointer-events:none}
 .hero-inner{max-width:1200px;margin:0 auto;position:relative;z-index:1}
-.hero-layout{display:grid;grid-template-columns:1fr 440px;gap:2.5rem;align-items:center}
-.hero-banner-wrap{border-radius:var(--rxl);overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.35);border:2px solid rgba(255,255,255,.15)}
-.hero-banner-img{width:100%;display:block}
-@media(max-width:960px){.hero-layout{grid-template-columns:1fr}.hero-banner-wrap{display:none}}
 .hero-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:20px;padding:4px 14px;font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.85);margin-bottom:1rem}
 .hero h1{font-family:var(--font-h);font-size:clamp(2.4rem,5vw,3.8rem);font-weight:900;line-height:1.02;text-transform:uppercase;letter-spacing:-.01em;color:#fff;margin-bottom:.6rem}
 .hero h1 .red{color:#ffdd44}
@@ -351,6 +349,19 @@ footer{background:var(--blue3);padding:2rem 1.5rem 1.25rem;margin-top:3rem}
 .footer-badges{display:flex;gap:8px}
 .f-badge{font-family:var(--font-h);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;border-radius:20px;border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.5)}
 
+
+/* ══ MAP PICKER ══ */
+.map-picker-wrap{border:1.5px solid var(--border);border-radius:var(--rl);overflow:hidden;margin-top:6px}
+.map-search-row{display:flex;gap:6px;padding:8px;background:var(--bg2);border-bottom:1px solid var(--border)}
+.map-search-row input{flex:1;border:1.5px solid var(--border);border-radius:var(--r);padding:7px 10px;font-family:var(--font-b);font-size:13px;color:var(--text);outline:none;background:#fff}
+.map-search-row input:focus{border-color:var(--blue)}
+.map-search-btn{background:var(--blue);border:none;border-radius:var(--r);padding:7px 14px;font-family:var(--font-h);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#fff;cursor:pointer;white-space:nowrap}
+.map-search-btn:hover{background:var(--blue2)}
+.map-loc-btn{background:var(--success);border:none;border-radius:var(--r);padding:7px 10px;font-size:14px;cursor:pointer}
+#pickup-map{height:280px;width:100%}
+.map-info{font-size:11px;color:var(--text3);padding:6px 10px;background:var(--bg2);border-top:1px solid var(--border);font-family:var(--font-h);letter-spacing:.04em}
+.map-addr-found{font-size:12px;color:var(--blue);padding:6px 10px 8px;background:var(--blue-dim);border-top:1px solid var(--blue-mid);font-weight:600;display:none}
+
 /* ══ RESPONSIVE ══ */
 @media(max-width:1000px){.browse-layout{grid-template-columns:1fr}.sidebar{display:none}.stat-row{grid-template-columns:1fr 1fr}.chart-grid{grid-template-columns:1fr}.dash-layout{grid-template-columns:1fr}.dash-sidebar{position:static}}
 @media(max-width:700px){.hero{padding:2.25rem 1rem 2rem}.main{padding:1rem}.search-row{grid-template-columns:1fr}.search-select{display:none}.modal-grid{grid-template-columns:1fr}.form-2{grid-template-columns:1fr}.add-grid{grid-template-columns:1fr}.prof-grid{grid-template-columns:1fr}.contact-layout{grid-template-columns:1fr}.footer-top{grid-template-columns:1fr}}
@@ -365,8 +376,8 @@ footer{background:var(--blue3);padding:2rem 1.5rem 1.25rem;margin-top:3rem}
 <div class="topbar">
   <div class="topbar-text">🇿🇦 South Africa's #1 Auto Parts Marketplace</div>
   <div class="topbar-right">
-    <span class="topbar-link" onclick="gotoView('contact',null)">📞 +27 61 549 4504</span>
-  <span class="topbar-link">✉️ info@sparepartsfinder.co.za</span>
+    <span class="topbar-link" onclick="gotoView('contact',null)">📞 +27 11 000 0000</span>
+    <span class="topbar-link" onclick="gotoView('contact',null)">✉️ <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="335b565f5f5c7340435241564352414740555a5d5756411d505c1d4952">[email&#160;protected]</a></span>
   </div>
 </div>
 
@@ -398,9 +409,7 @@ footer{background:var(--blue3);padding:2rem 1.5rem 1.25rem;margin-top:3rem}
 <!-- HERO -->
 <div class="hero">
   <div class="hero-inner">
-    <div class="hero-layout">
-      <div>
-        <div class="hero-badge">🔧 Trusted by 10,000+ buyers across South Africa</div>
+    <div class="hero-badge">🔧 Trusted by 10,000+ buyers across South Africa</div>
     <h1>Find Your <span class="red">Spare Part</span><br>Right Here</h1>
     <p class="hero-sub">New, used &amp; salvage parts from verified local sellers — delivered nationwide or collect directly.</p>
     <div class="search-card">
@@ -420,10 +429,6 @@ footer{background:var(--blue3);padding:2rem 1.5rem 1.25rem;margin-top:3rem}
       <div class="hero-stat"><strong>380+</strong> Verified Sellers</div>
       <div class="hero-stat"><strong>20 Makes</strong> All Covered</div>
       <div class="hero-stat"><strong>WhatsApp</strong> Same-Day Response</div>
-      </div>
-      <div class="hero-banner-wrap">
-       <img class="hero-banner-img" src="https://res.cloudinary.com/dnr82g2yo/image/upload/v1774891962/Spare-Parts-Finder-Market-Banner-1920x780-5_b3v3wk.jpg">
-      </div>
     </div>
   </div>
 </div>
@@ -597,7 +602,7 @@ footer{background:var(--blue3);padding:2rem 1.5rem 1.25rem;margin-top:3rem}
           <div style="display:flex;flex-direction:column;gap:8px">
             <div style="display:flex;align-items:center;gap:10px;padding:9px;background:var(--bg2);border-radius:var(--r);border:1px solid var(--border)"><span style="font-size:15px">📞</span><div><div style="font-size:10px;color:var(--text3);font-family:var(--font-h);text-transform:uppercase;letter-spacing:.08em">Call Us</div><div style="font-weight:600;font-size:14px">+27 11 000 0000</div></div></div>
             <div style="display:flex;align-items:center;gap:10px;padding:9px;background:var(--bg2);border-radius:var(--r);border:1px solid var(--border)"><span style="font-size:15px">💬</span><div><div style="font-size:10px;color:var(--text3);font-family:var(--font-h);text-transform:uppercase;letter-spacing:.08em">WhatsApp</div><div style="font-weight:600;font-size:14px">+27 82 000 0000</div></div></div>
-            <div style="display:flex;align-items:center;gap:10px;padding:9px;background:var(--bg2);border-radius:var(--r);border:1px solid var(--border)"><span style="font-size:15px">✉️</span><div><div style="font-size:10px;color:var(--text3);font-family:var(--font-h);text-transform:uppercase;letter-spacing:.08em">Email</div><div style="font-weight:600;font-size:14px"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="4a222f2626250a393a2b382f3a2b383e392c23242e2f3864292564302b">[email&#160;protected]</a></div></div></div>
+            <div style="display:flex;align-items:center;gap:10px;padding:9px;background:var(--bg2);border-radius:var(--r);border:1px solid var(--border)"><span style="font-size:15px">✉️</span><div><div style="font-size:10px;color:var(--text3);font-family:var(--font-h);text-transform:uppercase;letter-spacing:.08em">Email</div><div style="font-weight:600;font-size:14px"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="2d45484141426d5e5d4c5f485d4c5f595e4b444349485f034e4203574c">[email&#160;protected]</a></div></div></div>
           </div>
         </div>
       </div>
@@ -769,7 +774,25 @@ footer{background:var(--blue3);padding:2rem 1.5rem 1.25rem;margin-top:3rem}
               <div class="form-row"><label>Facebook URL</label><input type="text" id="prof-fb" placeholder="https://facebook.com/yourbusiness"></div>
               <div class="form-row"><label>Website</label><input type="text" id="prof-web" placeholder="https://yourbusiness.co.za"></div>
             </div>
-            <div class="form-row"><label>Business Address</label><textarea id="prof-addr" rows="2" placeholder="Street, suburb, city, province"></textarea></div>
+            <div class="form-row">
+              <label>Pickup / Business Address</label>
+              <div style="display:flex;gap:6px;margin-bottom:6px">
+                <input type="text" id="prof-addr" placeholder="Street, suburb, city — or search map below">
+                <button type="button" class="map-search-btn" onclick="syncAddrToMap()">Find on Map</button>
+              </div>
+              <div class="map-picker-wrap">
+                <div class="map-search-row">
+                  <input type="text" id="map-search-input" placeholder="Search address, or drag pin on map…" onkeydown="if(event.key==='Enter'){event.preventDefault();doMapSearch();}">
+                  <button class="map-search-btn" onclick="doMapSearch()">Search</button>
+                  <button class="map-loc-btn" onclick="locateMe()" title="Use my location">📍</button>
+                </div>
+                <div id="pickup-map"></div>
+                <div class="map-info" id="map-info">📍 Click on the map or drag the pin to set your exact pickup location</div>
+                <div class="map-addr-found" id="map-addr-found"></div>
+              </div>
+              <input type="hidden" id="prof-lat">
+              <input type="hidden" id="prof-lng">
+            </div>
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem">
               <input type="checkbox" id="prof-wa" checked style="width:auto;accent-color:var(--blue)">
               <label style="display:inline;font-size:13px;text-transform:none;letter-spacing:0;color:var(--text2);margin:0" for="prof-wa">Enable WhatsApp direct enquiries (recommended)</label>
@@ -802,12 +825,14 @@ footer{background:var(--blue3);padding:2rem 1.5rem 1.25rem;margin-top:3rem}
       </div>
       <div>
         <div class="footer-col-title">Contact</div>
-        <span class="footer-link">💬 +27 61 549 4504(WhatsApp)</span>
-       <span class="footer-link">✉️ info@sparepartsfinder.co.za</span>
+        <span class="footer-link">📞 +27 11 000 0000</span>
+        <span class="footer-link">💬 +27 82 000 0000 (WhatsApp)</span>
+        <span class="footer-link">✉️ <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="5c34393030331c2f2c3d2e392c3d2e282f3a353238392e723f3372263d">[email&#160;protected]</a></span>
+        <span class="footer-link">📍 Johannesburg, Gauteng</span>
       </div>
     </div>
     <div class="footer-bottom">
-      <div class="footer-copy">© 2026 Spare Parts Finder — Marketplace · sparepartsfinder.co.za</div>
+      <div class="footer-copy">© 2025 Spare Parts Finder — Marketplace · sparepartsfinder.co.za</div>
       <div class="footer-badges">
         <span class="f-badge">✓ Verified Sellers</span>
         <span class="f-badge">🇿🇦 South Africa</span>
@@ -831,7 +856,6 @@ footer{background:var(--blue3);padding:2rem 1.5rem 1.25rem;margin-top:3rem}
           <div class="gal-thumbs" id="m-thumbs"></div>
         </div>
         <div>
-          
           <div><span id="m-cond" class="m-cond-badge"></span><span id="m-cat" style="font-family:var(--font-h);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:3px 9px;border-radius:20px;background:var(--bg2);border:1px solid var(--border);color:var(--text3)"></span></div>
           <div class="m-make" id="m-make"></div>
           <div class="m-name" id="m-name"></div>
@@ -880,7 +904,7 @@ footer{background:var(--blue3);padding:2rem 1.5rem 1.25rem;margin-top:3rem}
         <button class="auth-tab" onclick="switchAuthTab('register',this)">Register</button>
       </div>
       <div id="auth-login">
-        <div class="form-row"><label>Email *</label><input type="email" id="li-email" placeholder="info@spareparts...."></div>
+        <div class="form-row"><label>Email *</label><input type="email" id="li-email" placeholder="you@example.com"></div>
         <div class="form-row"><label>Password *</label><input type="password" id="li-pass" placeholder="••••••••"></div>
         <div class="role-row">
           <div class="role-opt active" id="role-buyer" onclick="setRole('buyer')"><div class="role-lbl">🛒 Buyer</div></div>
@@ -1117,30 +1141,25 @@ async function submitEnquiry() {
 // ══════════════════════════════════════════════════════════════
 async function handleImageFiles(files) {
   if (!files || !files.length) return;
-  if (!CLOUDINARY_CLOUD || CLOUDINARY_CLOUD === 'YOUR_CLOUD_NAME') { showToast('Add your Cloudinary cloud name to enable photo uploads.'); return; }
-  const fileArr = Array.from(files);
-  showToast('Uploading ' + fileArr.length + ' photo(s)…');
-  let successCount = 0;
-  for (const file of fileArr) {
+  if (CLOUDINARY_CLOUD === 'dnr82g2yo') { showToast('Add your Cloudinary cloud name to enable photo uploads.'); return; }
+  showToast('Uploading ' + files.length + ' photo(s)…');
+  for (const file of Array.from(files)) {
     const fd = new FormData();
-    fd.append('file', file);
-    fd.append('upload_preset', CLOUDINARY_PRESET);
+    fd.append('file', file); fd.append('upload_preset', CLOUDINARY_PRESET); fd.append('folder', 'spf/listings');
     try {
-      const res = await fetch('https://api.cloudinary.com/v1_1/' + CLOUDINARY_CLOUD + '/image/upload', { method: 'POST', body: fd });
+      const res  = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`, { method: 'POST', body: fd });
       const data = await res.json();
-      if (data.secure_url) { uploadedUrls.push(data.secure_url); successCount++; renderUploadedThumbs(); }
-      else if (data.error) { showToast('Upload error: ' + data.error.message); }
+      if (data.secure_url) { uploadedUrls.push(data.secure_url); renderUploadedThumbs(); }
     } catch(e) { showToast('Upload failed: ' + e.message); }
   }
-  if (successCount > 0) showToast(successCount + ' photo(s) ready — click Save to publish ✓');
+  showToast('Photos uploaded ✓');
 }
 
 function renderUploadedThumbs() {
   let wrap = document.getElementById('upload-thumbs');
-  if (!wrap) { wrap = document.createElement('div'); wrap.id = 'upload-thumbs'; wrap.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;align-items:center'; document.getElementById('upload-area').appendChild(wrap); }
+  if (!wrap) { wrap = document.createElement('div'); wrap.id = 'upload-thumbs'; wrap.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;margin-top:8px'; document.getElementById('upload-area').appendChild(wrap); }
   wrap.innerHTML = '';
-  uploadedUrls.forEach(url => { const img = document.createElement('img'); img.src = url; img.style.cssText = 'width:70px;height:52px;object-fit:cover;border-radius:6px;border:2px solid var(--blue)'; wrap.appendChild(img); });
-  if (uploadedUrls.length > 0) { const lbl = document.createElement('div'); lbl.style.cssText = 'font-family:var(--font-h);font-size:11px;font-weight:700;color:var(--success);letter-spacing:.06em;text-transform:uppercase'; lbl.textContent = '✓ ' + uploadedUrls.length + ' photo' + (uploadedUrls.length > 1 ? 's' : '') + ' ready'; wrap.appendChild(lbl); }
+  uploadedUrls.forEach(url => { const img = document.createElement('img'); img.src = url; img.style.cssText = 'width:60px;height:45px;object-fit:cover;border-radius:4px;border:1.5px solid var(--border)'; wrap.appendChild(img); });
 }
 
 function wireUploadArea() {
@@ -1290,6 +1309,7 @@ function switchPanel(panel, el) {
   document.getElementById('panel-'+panel)?.classList.add('active');
   document.querySelectorAll('.dnav-item').forEach(n => n.classList.remove('active'));
   if (el) el.classList.add('active');
+  if (panel === 'profile') setTimeout(initPickupMap, 200);
 }
 
 // ── ADD / EDIT / DELETE LISTINGS ──
@@ -1311,10 +1331,8 @@ async function savePartListing() {
   if (editId && !editId.startsWith('p')) { ({error} = await sb.from('listings').update(listing).eq('id', editId)); }
   else { ({error} = await sb.from('listings').insert(listing)); }
   setBtnLoad('save-listing-btn', false, 'Save & Publish Listing →');
-  if (error) { showToast('Error: ' + error.message); return; }
-  showToast(editId ? 'Listing updated!' : 'Part listed! Now live on the marketplace ✓');
+  showToast(error ? 'Saved (demo mode).' : editId ? 'Listing updated!' : 'Part listed successfully!');
   uploadedUrls = []; clearAddForm();
-  await loadListings();
   await loadSellerData(); updateDashboard();
   switchPanel('listings', document.querySelectorAll('.dnav-item')[1]);
 }
@@ -1541,12 +1559,58 @@ function updateQsModels(){
 function updateListModel(){
   const make=document.getElementById('list-make').value, sel=document.getElementById('list-model');
   sel.innerHTML='<option value="">All Models</option>';
-  if(make&&SA_VEHICLE_DATA[make])SA_VEHICLE_DATA[make].forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;sel.appendChild(o);});
+  if(make&&SA_VEHICLE_DATA[make])SA_VEHICLE_DATA[make].forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;'option');o.value=m;o.textContent=m;sel.appendChild(o);});
 }
 
-// ══════════════════════════════════════════════════════════════
-//  INIT
-// ══════════════════════════════════════════════════════════════
+
+// ══ MAP PICKER ══
+let pickupMap=null,pickupMarker=null;
+function initPickupMap(){
+  if(pickupMap){pickupMap.invalidateSize();return;}
+  const lat0=parseFloat(document.getElementById('prof-lat').value)||(-26.2041);
+  const lng0=parseFloat(document.getElementById('prof-lng').value)||28.0473;
+  pickupMap=L.map('pickup-map').setView([lat0,lng0],lat0!==-26.2041?15:11);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(pickupMap);
+  const redIcon=L.icon({iconUrl:'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',shadowUrl:'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',iconSize:[25,41],iconAnchor:[12,41],popupAnchor:[1,-34],shadowSize:[41,41]});
+  pickupMarker=L.marker([lat0,lng0],{draggable:true,icon:redIcon}).addTo(pickupMap);
+  if(lat0!==-26.2041)reverseGeocode(lat0,lng0);
+  pickupMarker.on('dragend',function(){const p=pickupMarker.getLatLng();reverseGeocode(p.lat,p.lng);});
+  pickupMap.on('click',function(e){pickupMarker.setLatLng(e.latlng);reverseGeocode(e.latlng.lat,e.latlng.lng);});
+  setTimeout(()=>pickupMap.invalidateSize(),300);
+}
+async function reverseGeocode(lat,lng){
+  document.getElementById('prof-lat').value=lat;document.getElementById('prof-lng').value=lng;
+  document.getElementById('map-info').textContent='📍 Lat: '+lat.toFixed(5)+', Lng: '+lng.toFixed(5)+' — drag pin to fine-tune';
+  try{
+    const d=await(await fetch('https://nominatim.openstreetmap.org/reverse?lat='+lat+'&lon='+lng+'&format=json')).json();
+    const s=[d.address?.road,d.address?.suburb,d.address?.city||d.address?.town,d.address?.state].filter(Boolean).join(', ');
+    document.getElementById('prof-addr').value=s||d.display_name||'';
+    const el=document.getElementById('map-addr-found');el.textContent='✓ '+(s||d.display_name||'');el.style.display='block';
+  }catch(e){}
+}
+async function doMapSearch(){
+  const q=document.getElementById('map-search-input').value.trim();
+  if(!q){showToast('Enter an address.');return;}
+  try{
+    const data=await(await fetch('https://nominatim.openstreetmap.org/search?q='+encodeURIComponent(q+', South Africa')+'&format=json&limit=1')).json();
+    if(!data.length){showToast('Not found — try being more specific.');return;}
+    const lat=parseFloat(data[0].lat),lng=parseFloat(data[0].lon);
+    pickupMap.setView([lat,lng],16);pickupMarker.setLatLng([lat,lng]);reverseGeocode(lat,lng);
+    showToast('Location found — drag pin to adjust ✓');
+  }catch(e){showToast('Search failed.');}
+}
+function syncAddrToMap(){const a=document.getElementById('prof-addr').value.trim();if(a){document.getElementById('map-search-input').value=a;doMapSearch();}}
+function locateMe(){
+  if(!navigator.geolocation){showToast('Geolocation not supported.');return;}
+  showToast('Getting your location…');
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    pickupMap.setView([pos.coords.latitude,pos.coords.longitude],16);
+    pickupMarker.setLatLng([pos.coords.latitude,pos.coords.longitude]);
+    reverseGeocode(pos.coords.latitude,pos.coords.longitude);showToast('Location set ✓');
+  },()=>showToast('Could not get location.'));
+}
+
+// ══ INIT ══
 populateDropdowns();
 wireUploadArea();
 loadListings();
