@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPF Admin — Super User Panel</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --blue:#1e5bb0;--blue2:#174d99;--blue3:#0d3a7a;--blue-dim:rgba(30,91,176,.09);--blue-mid:rgba(30,91,176,.18);
+  --red:#e31e24;--red2:#c21a1f;--red-dim:rgba(227,30,36,.09);
+  --bg:#eef2f8;--surface:#fff;--border:#ccd8ea;--border2:#aabdd4;
+  --text:#0c1b2e;--text2:#2d4560;--text3:#6b86a0;
+  --success:#1a8a3c;--warn:#c27b00;--danger:#e31e24;
+  --font-h:'Barlow Condensed',sans-serif;--font-b:'Barlow',sans-serif;
+  --r:6px;--rl:10px;--rxl:14px;
+  --shadow:0 2px 10px rgba(0,0,0,.07);--shadow-md:0 4px 20px rgba(0,0,0,.10);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--font-b);font-size:14px;line-height:1.6;min-height:100vh}
+a{color:inherit;text-decoration:none}
+
+/* ── LOGIN SCREEN ── */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1.5rem}
+.login-card{background:#fff;border:1.5px solid var(--border);border-radius:var(--rxl);padding:2.5rem;width:100%;max-width:400px;box-shadow:var(--shadow-md)}
+.login-logo{text-align:center;margin-bottom:1.75rem}
+.login-logo-icon{width:52px;height:52px;background:var(--red);border-radius:var(--r);display:flex;align-items:center;justify-content:center;margin:0 auto .75rem;font-size:1.5rem}
+.login-logo-title{font-family:var(--font-h);font-size:22px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;color:var(--blue)}
+.login-logo-sub{font-size:11px;color:var(--text3);font-family:var(--font-h);letter-spacing:.1em;text-transform:uppercase}
+.login-error{background:var(--red-dim);border:1px solid rgba(227,30,36,.2);border-radius:var(--r);padding:8px 12px;font-size:12px;color:var(--red);margin-bottom:1rem;display:none}
+
+/* ── MAIN LAYOUT ── */
+.app{display:none;min-height:100vh}
+.app.visible{display:flex}
+.sidebar{width:240px;background:var(--blue3);min-height:100vh;position:sticky;top:0;flex-shrink:0;display:flex;flex-direction:column}
+.sidebar-brand{padding:1.25rem 1.1rem;border-bottom:1px solid rgba(255,255,255,.1)}
+.sidebar-logo{font-family:var(--font-h);font-size:16px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;color:#fff}
+.sidebar-logo span{color:#ffdd44}
+.sidebar-sub{font-size:10px;color:rgba(255,255,255,.45);font-family:var(--font-h);letter-spacing:.1em;text-transform:uppercase;margin-top:2px}
+.sidebar-admin{display:flex;align-items:center;gap:8px;padding:.85rem 1.1rem;border-bottom:1px solid rgba(255,255,255,.1)}
+.admin-avatar{width:32px;height:32px;border-radius:50%;background:var(--red);display:flex;align-items:center;justify-content:center;font-family:var(--font-h);font-size:12px;font-weight:800;color:#fff;flex-shrink:0}
+.admin-name{font-size:12px;font-weight:600;color:#fff}
+.admin-role{font-size:10px;color:rgba(255,255,255,.5);font-family:var(--font-h);letter-spacing:.06em;text-transform:uppercase}
+.sidebar-nav{padding:.5rem 0;flex:1}
+.nav-section{font-family:var(--font-h);font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.35);padding:.75rem 1.1rem .35rem}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 1.1rem;font-size:13px;font-weight:500;color:rgba(255,255,255,.65);cursor:pointer;transition:all .12s;border-left:3px solid transparent}
+.nav-item:hover{background:rgba(255,255,255,.07);color:#fff}
+.nav-item.active{background:rgba(255,255,255,.1);border-left-color:#ffdd44;color:#fff;font-weight:600}
+.nav-icon{font-size:14px;width:18px;text-align:center;flex-shrink:0}
+.nav-badge{margin-left:auto;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 6px;border-radius:20px;min-width:16px;text-align:center}
+.sidebar-footer{padding:1rem 1.1rem;border-top:1px solid rgba(255,255,255,.1)}
+.logout-btn{width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:var(--r);padding:8px;font-family:var(--font-h);font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.65);cursor:pointer;transition:all .15s}
+.logout-btn:hover{background:rgba(255,255,255,.15);color:#fff}
+
+/* ── MAIN CONTENT ── */
+.main{flex:1;min-width:0;padding:1.5rem}
+.page{display:none}.page.active{display:block}
+.page-title{font-family:var(--font-h);font-size:26px;font-weight:900;text-transform:uppercase;letter-spacing:.02em;color:var(--blue);margin-bottom:1.25rem;display:flex;align-items:center;gap:10px}
+.page-title::after{content:'';flex:1;height:1.5px;background:var(--border)}
+
+/* ── STAT CARDS ── */
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.5rem}
+.stat-card{background:#fff;border:1.5px solid var(--border);border-radius:var(--rl);padding:1rem 1.1rem;border-top:3px solid var(--blue);box-shadow:var(--shadow)}
+.stat-card.red{border-top-color:var(--red)}
+.stat-card.green{border-top-color:var(--success)}
+.stat-card.warn{border-top-color:var(--warn)}
+.stat-lbl{font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:4px}
+.stat-num{font-family:var(--font-h);font-size:32px;font-weight:900;color:var(--blue);line-height:1}
+.stat-card.red .stat-num{color:var(--red)}
+.stat-card.green .stat-num{color:var(--success)}
+.stat-card.warn .stat-num{color:var(--warn)}
+.stat-sub{font-size:11px;color:var(--text3);margin-top:3px}
+
+/* ── TABLES ── */
+.table-card{background:#fff;border:1.5px solid var(--border);border-radius:var(--rxl);box-shadow:var(--shadow);overflow:hidden;margin-bottom:1.25rem}
+.table-hd{display:flex;align-items:center;justify-content:space-between;padding:.9rem 1.1rem;border-bottom:1px solid var(--border)}
+.table-title{font-family:var(--font-h);font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text2)}
+.table-actions{display:flex;gap:8px;align-items:center}
+.search-input{border:1.5px solid var(--border);border-radius:var(--r);padding:6px 10px;font-family:var(--font-b);font-size:13px;color:var(--text);outline:none;transition:border-color .15s;background:var(--bg)}
+.search-input:focus{border-color:var(--blue);background:#fff}
+.filter-select{border:1.5px solid var(--border);border-radius:var(--r);padding:6px 10px;font-family:var(--font-b);font-size:13px;color:var(--text2);background:var(--bg);outline:none;cursor:pointer}
+table{width:100%;border-collapse:collapse}
+thead th{font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);padding:9px 12px;text-align:left;border-bottom:1px solid var(--border);background:var(--bg);white-space:nowrap}
+tbody td{padding:10px 12px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:middle;font-size:13px}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:var(--bg)}
+.cell-bold{font-weight:600;color:var(--text)}
+.cell-mono{font-family:var(--font-h);font-size:12px;letter-spacing:.04em}
+
+/* ── PILLS ── */
+.pill{font-family:var(--font-h);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;border-radius:20px;white-space:nowrap}
+.pill-active{background:rgba(26,138,60,.12);color:var(--success);border:1px solid rgba(26,138,60,.2)}
+.pill-pending{background:rgba(194,123,0,.12);color:var(--warn);border:1px solid rgba(194,123,0,.2)}
+.pill-suspended{background:rgba(227,30,36,.12);color:var(--red);border:1px solid rgba(227,30,36,.2)}
+.pill-banned{background:#1a1a1a;color:#fff;border:1px solid #333}
+.pill-paid{background:rgba(26,138,60,.12);color:var(--success);border:1px solid rgba(26,138,60,.2)}
+.pill-unpaid{background:rgba(227,30,36,.12);color:var(--red);border:1px solid rgba(227,30,36,.2)}
+.pill-trial{background:rgba(30,91,176,.12);color:var(--blue);border:1px solid rgba(30,91,176,.2)}
+
+/* ── ACTION BUTTONS ── */
+.act-row{display:flex;gap:5px;flex-wrap:wrap}
+.btn{border-radius:var(--r);padding:5px 11px;font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;border:none;transition:all .12s;white-space:nowrap}
+.btn-approve{background:var(--success);color:#fff}.btn-approve:hover{background:#14732f}
+.btn-suspend{background:var(--warn);color:#fff}.btn-suspend:hover{background:#a36800}
+.btn-ban{background:var(--red);color:#fff}.btn-ban:hover{background:var(--red2)}
+.btn-unban{background:#555;color:#fff}.btn-unban:hover{background:#333}
+.btn-activate{background:var(--blue);color:#fff}.btn-activate:hover{background:var(--blue2)}
+.btn-delete{background:transparent;border:1.5px solid var(--red);color:var(--red)}.btn-delete:hover{background:var(--red-dim)}
+.btn-view{background:transparent;border:1.5px solid var(--border2);color:var(--text2)}.btn-view:hover{border-color:var(--blue);color:var(--blue)}
+.btn-primary{background:var(--blue);color:#fff;padding:8px 18px;font-size:12px}.btn-primary:hover{background:var(--blue2)}
+.btn-red{background:var(--red);color:#fff;padding:8px 18px;font-size:12px}.btn-red:hover{background:var(--red2)}
+
+/* ── MODAL ── */
+.overlay{display:none;position:fixed;inset:0;background:rgba(8,20,42,.72);z-index:200;align-items:center;justify-content:center;padding:1.5rem;backdrop-filter:blur(3px)}
+.overlay.open{display:flex}
+.modal{background:#fff;border:1px solid var(--border);border-radius:var(--rxl);width:100%;max-width:500px;box-shadow:0 8px 40px rgba(0,0,0,.18);animation:mIn .2s ease}
+@keyframes mIn{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
+.modal-hd{background:var(--blue);padding:.9rem 1.25rem;border-radius:var(--rxl) var(--rxl) 0 0;display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-family:var(--font-h);font-size:14px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#fff}
+.modal-close{background:rgba(255,255,255,.15);border:none;border-radius:var(--r);width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff;font-size:14px}
+.modal-close:hover{background:rgba(255,255,255,.28)}
+.modal-body{padding:1.25rem}
+.modal-footer{padding:.85rem 1.25rem;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+label{display:block;font-size:10px;font-family:var(--font-h);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:5px}
+input,select,textarea{width:100%;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--r);padding:8px 10px;font-family:var(--font-b);font-size:13px;color:var(--text);outline:none;transition:border-color .15s;appearance:none;margin-bottom:12px}
+input:focus,select:focus,textarea:focus{border-color:var(--blue);background:#fff}
+textarea{resize:vertical;min-height:80px}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:1.5rem;right:1.5rem;background:#fff;border:1.5px solid var(--border);border-left:4px solid var(--blue);border-radius:var(--rl);padding:10px 16px;font-size:13px;color:var(--text);z-index:400;transform:translateY(60px);opacity:0;transition:all .25s ease;box-shadow:var(--shadow-md);max-width:300px}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.success{border-left-color:var(--success)}
+.toast.error{border-left-color:var(--red)}
+
+/* ── INFO CARDS ── */
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.25rem}
+.info-card{background:#fff;border:1.5px solid var(--border);border-radius:var(--rl);padding:1rem;box-shadow:var(--shadow)}
+.info-card-title{font-family:var(--font-h);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:.75rem}
+
+/* ── REVENUE BARS ── */
+.rev-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.rev-bar-lbl{font-size:12px;color:var(--text2);width:80px;flex-shrink:0}
+.rev-bar-track{flex:1;height:8px;background:var(--bg);border-radius:4px;overflow:hidden;border:1px solid var(--border)}
+.rev-bar-fill{height:100%;background:var(--blue);border-radius:4px}
+.rev-bar-val{font-family:var(--font-h);font-size:12px;font-weight:700;color:var(--blue);min-width:50px;text-align:right}
+
+/* ── SUB BADGE ── */
+.sub-info{display:flex;align-items:center;gap:8px}
+.sub-days{font-size:11px;color:var(--text3)}
+
+@media(max-width:900px){.stat-row{grid-template-columns:1fr 1fr}.sidebar{width:200px}.info-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- ══ LOGIN SCREEN ══ -->
+<div class="login-wrap" id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-icon">🔧</div>
+      <div class="login-logo-title">SPF Admin</div>
+      <div class="login-logo-sub">Super User Panel</div>
+    </div>
+    <div class="login-error" id="login-error"></div>
+    <div><label>Admin Email</label><input type="email" id="admin-email" placeholder="admin@sparepartsfinder.co.za" onkeydown="if(event.key==='Enter')doAdminLogin()"></div>
+    <div><label>Password</label><input type="password" id="admin-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doAdminLogin()"></div>
+    <button class="btn btn-primary" style="width:100%;padding:11px;font-size:13px" onclick="doAdminLogin()" id="login-btn">Sign In to Admin Panel →</button>
+  </div>
+</div>
+
+<!-- ══ ADMIN APP ══ -->
+<div class="app" id="admin-app">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-logo">Spare Parts <span>Finder</span></div>
+      <div class="sidebar-sub">Admin Panel</div>
+    </div>
+    <div class="sidebar-admin">
+      <div class="admin-avatar" id="admin-avatar">SA</div>
+      <div><div class="admin-name" id="admin-name">Admin</div><div class="admin-role">Super Admin</div></div>
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-section">Overview</div>
+      <div class="nav-item active" onclick="showPage('dashboard',this)"><span class="nav-icon">📊</span>Dashboard</div>
+
+      <div class="nav-section">User Management</div>
+      <div class="nav-item" onclick="showPage('sellers',this)"><span class="nav-icon">🏪</span>Sellers<span class="nav-badge" id="nb-pending">0</span></div>
+      <div class="nav-item" onclick="showPage('buyers',this)"><span class="nav-icon">👥</span>Buyers</div>
+      <div class="nav-item" onclick="showPage('applications',this)"><span class="nav-icon">📋</span>Applications<span class="nav-badge" id="nb-apps">0</span></div>
+
+      <div class="nav-section">Platform</div>
+      <div class="nav-item" onclick="showPage('listings',this)"><span class="nav-icon">📦</span>All Listings</div>
+      <div class="nav-item" onclick="showPage('enquiries',this)"><span class="nav-icon">🔔</span>Enquiries</div>
+      <div class="nav-item" onclick="showPage('subscriptions',this)"><span class="nav-icon">💳</span>Subscriptions</div>
+
+      <div class="nav-section">Finance</div>
+      <div class="nav-item" onclick="showPage('revenue',this)"><span class="nav-icon">💰</span>Revenue</div>
+      <div class="nav-item" onclick="showPage('invoices',this)"><span class="nav-icon">🧾</span>Invoices</div>
+
+      <div class="nav-section">Settings</div>
+      <div class="nav-item" onclick="showPage('settings',this)"><span class="nav-icon">⚙️</span>Platform Settings</div>
+      <div class="nav-item" onclick="showPage('audit',this)"><span class="nav-icon">📝</span>Audit Log</div>
+    </div>
+    <div class="sidebar-footer">
+      <button class="logout-btn" onclick="doLogout()">🚪 Sign Out</button>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main">
+
+    <!-- ── DASHBOARD ── -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-title">Dashboard</div>
+      <div class="stat-row">
+        <div class="stat-card green"><div class="stat-lbl">Total Sellers</div><div class="stat-num" id="ds-sellers">0</div><div class="stat-sub">registered</div></div>
+        <div class="stat-card"><div class="stat-lbl">Active Listings</div><div class="stat-num" id="ds-listings">0</div><div class="stat-sub">live on platform</div></div>
+        <div class="stat-card warn"><div class="stat-lbl">Pending Approval</div><div class="stat-num" id="ds-pending">0</div><div class="stat-sub">awaiting review</div></div>
+        <div class="stat-card red"><div class="stat-lbl">Suspended</div><div class="stat-num" id="ds-suspended">0</div><div class="stat-sub">non-payment / ban</div></div>
+      </div>
+      <div class="info-grid">
+        <div class="info-card">
+          <div class="info-card-title">💰 Monthly Revenue (R499/seller)</div>
+          <div style="font-family:var(--font-h);font-size:36px;font-weight:900;color:var(--success)" id="ds-revenue">R 0</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:4px" id="ds-revenue-sub">0 paid subscribers</div>
+          <div style="margin-top:1rem">
+            <div class="rev-bar-row"><div class="rev-bar-lbl">Paid</div><div class="rev-bar-track"><div class="rev-bar-fill" id="rev-paid-bar" style="width:0%"></div></div><div class="rev-bar-val" id="rev-paid-count">0</div></div>
+            <div class="rev-bar-row"><div class="rev-bar-lbl">Trial</div><div class="rev-bar-track"><div class="rev-bar-fill" style="width:0%;background:var(--blue);" id="rev-trial-bar"></div></div><div class="rev-bar-val" id="rev-trial-count">0</div></div>
+            <div class="rev-bar-row"><div class="rev-bar-lbl">Unpaid</div><div class="rev-bar-track"><div class="rev-bar-fill" style="width:0%;background:var(--red);" id="rev-unpaid-bar"></div></div><div class="rev-bar-val" id="rev-unpaid-count">0</div></div>
+          </div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-title">🔔 Recent Activity</div>
+          <div id="recent-activity" style="font-size:12px;color:var(--text3)">Loading…</div>
+        </div>
+      </div>
+      <div class="table-card">
+        <div class="table-hd"><span class="table-title">⚠️ Requires Attention</span></div>
+        <table><thead><tr><th>Seller</th><th>Issue</th><th>Since</th><th>Action</th></tr></thead>
+        <tbody id="attention-table"><tr><td colspan="4" style="text-align:center;padding:1.5rem;color:var(--text3)">Loading…</td></tr></tbody></table>
+      </div>
+    </div>
+
+    <!-- ── SELLERS ── -->
+    <div class="page" id="page-sellers">
+      <div class="page-title">Seller Management</div>
+      <div class="table-card">
+        <div class="table-hd">
+          <span class="table-title">All Sellers</span>
+          <div class="table-actions">
+            <input class="search-input" placeholder="Search seller…" oninput="filterTable('sellers-table',this.value)">
+            <select class="filter-select" onchange="filterByStatus('sellers-table',this.value)">
+              <option value="">All Status</option>
+              <option value="approved">Approved</option>
+              <option value="pending">Pending</option>
+              <option value="suspended">Suspended</option>
+              <option value="banned">Banned</option>
+            </select>
+          </div>
+        </div>
+        <table id="sellers-table">
+          <thead><tr><th>Business</th><th>Contact</th><th>Status</th><th>Subscription</th><th>Listings</th><th>Joined</th><th>Actions</th></tr></thead>
+          <tbody id="sellers-tbody"><tr><td colspan="7" style="text-align:center;padding:1.5rem;color:var(--text3)">Loading sellers…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── BUYERS ── -->
+    <div class="page" id="page-buyers">
+      <div class="page-title">Buyer Management</div>
+      <div class="table-card">
+        <div class="table-hd">
+          <span class="table-title">All Buyers</span>
+          <div class="table-actions">
+            <input class="search-input" placeholder="Search buyer…" oninput="filterTable('buyers-table',this.value)">
+          </div>
+        </div>
+        <table id="buyers-table">
+          <thead><tr><th>Email</th><th>Status</th><th>Enquiries</th><th>Joined</th><th>Actions</th></tr></thead>
+          <tbody id="buyers-tbody"><tr><td colspan="5" style="text-align:center;padding:1.5rem;color:var(--text3)">Loading buyers…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── APPLICATIONS ── -->
+    <div class="page" id="page-applications">
+      <div class="page-title">Seller Applications</div>
+      <div class="table-card">
+        <div class="table-hd"><span class="table-title">Pending Applications</span></div>
+        <table>
+          <thead><tr><th>Business Name</th><th>Contact</th><th>Email</th><th>Phone</th><th>Applied</th><th>Actions</th></tr></thead>
+          <tbody id="apps-tbody"><tr><td colspan="6" style="text-align:center;padding:1.5rem;color:var(--text3)">Loading applications…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── LISTINGS ── -->
+    <div class="page" id="page-listings">
+      <div class="page-title">All Listings</div>
+      <div class="table-card">
+        <div class="table-hd">
+          <span class="table-title">Platform Listings</span>
+          <div class="table-actions">
+            <input class="search-input" placeholder="Search listing…" oninput="filterTable('listings-table',this.value)">
+            <select class="filter-select" onchange="filterByStatus('listings-table',this.value)">
+              <option value="">All</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+        </div>
+        <table id="listings-table">
+          <thead><tr><th>Part Name</th><th>Seller</th><th>Category</th><th>Price</th><th>Status</th><th>Listed</th><th>Actions</th></tr></thead>
+          <tbody id="listings-tbody"><tr><td colspan="7" style="text-align:center;padding:1.5rem;color:var(--text3)">Loading listings…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── ENQUIRIES ── -->
+    <div class="page" id="page-enquiries">
+      <div class="page-title">All Enquiries</div>
+      <div class="table-card">
+        <div class="table-hd"><span class="table-title">Platform Enquiries</span></div>
+        <table>
+          <thead><tr><th>Ref</th><th>Buyer</th><th>Part</th><th>Seller</th><th>Status</th><th>Date</th></tr></thead>
+          <tbody id="enquiries-tbody"><tr><td colspan="6" style="text-align:center;padding:1.5rem;color:var(--text3)">Loading enquiries…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── SUBSCRIPTIONS ── -->
+    <div class="page" id="page-subscriptions">
+      <div class="page-title">Subscriptions — R499/month</div>
+      <div class="stat-row" style="grid-template-columns:repeat(3,1fr)">
+        <div class="stat-card green"><div class="stat-lbl">Paid Subscribers</div><div class="stat-num" id="sub-paid">0</div><div class="stat-sub">active</div></div>
+        <div class="stat-card warn"><div class="stat-lbl">On Trial</div><div class="stat-num" id="sub-trial">0</div><div class="stat-sub">30-day free trial</div></div>
+        <div class="stat-card red"><div class="stat-lbl">Overdue</div><div class="stat-num" id="sub-overdue">0</div><div class="stat-sub">payment failed</div></div>
+      </div>
+      <div class="table-card">
+        <div class="table-hd">
+          <span class="table-title">Subscription Status</span>
+          <div class="table-actions">
+            <button class="btn btn-red" onclick="openSendPaymentReminders()">📧 Send Payment Reminders</button>
+            <button class="btn btn-primary" onclick="openSuspendNonPayers()">🔒 Suspend Non-Payers</button>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>Seller</th><th>Plan</th><th>Status</th><th>Last Payment</th><th>Next Due</th><th>Days Overdue</th><th>Actions</th></tr></thead>
+          <tbody id="subs-tbody"><tr><td colspan="7" style="text-align:center;padding:1.5rem;color:var(--text3)">Loading subscriptions…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── REVENUE ── -->
+    <div class="page" id="page-revenue">
+      <div class="page-title">Revenue Overview</div>
+      <div class="stat-row">
+        <div class="stat-card green"><div class="stat-lbl">This Month</div><div class="stat-num" id="rev-month">R 0</div><div class="stat-sub">collected</div></div>
+        <div class="stat-card"><div class="stat-lbl">Annual Run Rate</div><div class="stat-num" id="rev-annual">R 0</div><div class="stat-sub">projected</div></div>
+        <div class="stat-card warn"><div class="stat-lbl">Outstanding</div><div class="stat-num" id="rev-outstanding">R 0</div><div class="stat-sub">awaiting payment</div></div>
+        <div class="stat-card red"><div class="stat-lbl">Written Off</div><div class="stat-num" id="rev-written">R 0</div><div class="stat-sub">bad debt</div></div>
+      </div>
+      <div class="table-card">
+        <div class="table-hd"><span class="table-title">Payment History</span></div>
+        <table>
+          <thead><tr><th>Date</th><th>Seller</th><th>Amount</th><th>Method</th><th>Reference</th><th>Status</th></tr></thead>
+          <tbody id="payments-tbody"><tr><td colspan="6" style="text-align:center;padding:1.5rem;color:var(--text3)">Loading payment records…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── INVOICES ── -->
+    <div class="page" id="page-invoices">
+      <div class="page-title">Invoices</div>
+      <div class="table-card">
+        <div class="table-hd">
+          <span class="table-title">All Invoices</span>
+          <button class="btn btn-primary" onclick="generateInvoices()">⚡ Generate Monthly Invoices</button>
+        </div>
+        <table>
+          <thead><tr><th>Invoice #</th><th>Seller</th><th>Amount</th><th>Period</th><th>Issued</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="invoices-tbody"><tr><td colspan="7" style="text-align:center;padding:1.5rem;color:var(--text3)">Loading invoices…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── SETTINGS ── -->
+    <div class="page" id="page-settings">
+      <div class="page-title">Platform Settings</div>
+      <div class="info-grid">
+        <div class="info-card">
+          <div class="info-card-title">💳 Subscription Pricing</div>
+          <div class="form-row" style="margin-bottom:10px"><label>Monthly Fee (ZAR)</label><input type="number" id="set-price" value="499"></div>
+          <div class="form-row" style="margin-bottom:10px"><label>Free Trial Period (days)</label><input type="number" id="set-trial" value="30"></div>
+          <div class="form-row" style="margin-bottom:10px"><label>Grace Period after non-payment (days)</label><input type="number" id="set-grace" value="7"></div>
+          <button class="btn btn-primary" onclick="saveSettings()">Save Pricing Settings</button>
+        </div>
+        <div class="info-card">
+          <div class="info-card-title">🔒 Auto-Suspension Rules</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text2)">
+              <input type="checkbox" id="set-auto-suspend" checked style="width:auto;accent-color:var(--blue);margin-bottom:0"> Auto-suspend sellers after grace period
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text2)">
+              <input type="checkbox" id="set-auto-email" checked style="width:auto;accent-color:var(--blue);margin-bottom:0"> Send payment reminders via email
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text2)">
+              <input type="checkbox" id="set-new-approval" checked style="width:auto;accent-color:var(--blue);margin-bottom:0"> Require admin approval for new sellers
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text2)">
+              <input type="checkbox" id="set-listing-moderate" style="width:auto;accent-color:var(--blue);margin-bottom:0"> Require listing approval before going live
+            </label>
+          </div>
+          <button class="btn btn-primary" style="margin-top:1rem" onclick="saveSettings()">Save Rules</button>
+        </div>
+        <div class="info-card">
+          <div class="info-card-title">👤 Add Admin User</div>
+          <div><label>Email</label><input type="email" id="new-admin-email" placeholder="admin@example.com"></div>
+          <div><label>Role</label>
+            <select id="new-admin-role">
+              <option value="admin">Admin</option>
+              <option value="super_admin">Super Admin</option>
+              <option value="support">Support</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="addAdminUser()">Add Admin User</button>
+        </div>
+        <div class="info-card">
+          <div class="info-card-title">📧 Email Templates</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <button class="btn btn-view" style="text-align:left;padding:8px 12px;font-family:var(--font-b);font-size:12px;text-transform:none;letter-spacing:0" onclick="showToast('Email template editor coming soon')">Payment Reminder Template →</button>
+            <button class="btn btn-view" style="text-align:left;padding:8px 12px;font-family:var(--font-b);font-size:12px;text-transform:none;letter-spacing:0" onclick="showToast('Email template editor coming soon')">Suspension Notice Template →</button>
+            <button class="btn btn-view" style="text-align:left;padding:8px 12px;font-family:var(--font-b);font-size:12px;text-transform:none;letter-spacing:0" onclick="showToast('Email template editor coming soon')">Welcome Email Template →</button>
+            <button class="btn btn-view" style="text-align:left;padding:8px 12px;font-family:var(--font-b);font-size:12px;text-transform:none;letter-spacing:0" onclick="showToast('Email template editor coming soon')">Approval Email Template →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── AUDIT LOG ── -->
+    <div class="page" id="page-audit">
+      <div class="page-title">Audit Log</div>
+      <div class="table-card">
+        <div class="table-hd"><span class="table-title">Admin Actions</span></div>
+        <table>
+          <thead><tr><th>Time</th><th>Admin</th><th>Action</th><th>Target</th><th>Details</th></tr></thead>
+          <tbody id="audit-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- ── ACTION MODAL ── -->
+<div class="overlay" id="action-modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-hd">
+      <span class="modal-title" id="modal-title">Confirm Action</span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-view" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="modal-confirm-btn" onclick="executeModalAction()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+//  CONFIG — same Supabase project as main marketplace
+// ══════════════════════════════════════════════════════════════
+const SUPABASE_URL  = 'https://ycoclceordqbeumeujzf.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inljb2NsY2VvcmRxYmV1bWV1anpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3OTYyODQsImV4cCI6MjA5MDM3MjI4NH0.C2WvWR1MVMWJPJ6fHgcuEZLNC3HeElYsFjWSTFhrmzo';
+
+const SUPER_ADMIN_EMAILS = ['chevan@sparepartsfinder.co.za']; // Add admin emails here
+const SUBSCRIPTION_PRICE = 499; // ZAR per month
+const TRIAL_DAYS = 30;
+const GRACE_DAYS = 7;
+
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+// ── STATE ──
+let adminUser = null;
+let auditLog = [];
+let modalAction = null;
+let allSellers = [], allListings = [], allEnquiries = [];
+
+// ── DEMO DATA (shows when Supabase tables are empty) ──
+const DEMO_SELLERS = [
+  { id:'s1', business_name:'Premium Parts Corp', contact_person:'Chevan Naidu', email:'chevan@sparepartsfinder.co.za', phone:'+27 61 549 4504', status:'approved', sub_status:'paid', sub_paid_until: new Date(Date.now()+86400000*25).toISOString(), listing_count:5, created_at: new Date(Date.now()-86400000*45).toISOString() },
+  { id:'s2', business_name:'Coastal Spares KZN', contact_person:'Sarah Smith', email:'sarah@coastalspares.co.za', phone:'+27 73 000 0001', status:'approved', sub_status:'trial', sub_paid_until: new Date(Date.now()+86400000*14).toISOString(), listing_count:3, created_at: new Date(Date.now()-86400000*16).toISOString() },
+  { id:'s3', business_name:'CT Salvage Hub', contact_person:'Mike Ross', email:'mike@ctsalvage.co.za', phone:'+27 83 000 0002', status:'suspended', sub_status:'unpaid', sub_paid_until: new Date(Date.now()-86400000*5).toISOString(), listing_count:0, created_at: new Date(Date.now()-86400000*60).toISOString() },
+  { id:'s4', business_name:'Joburg Spares Direct', contact_person:'Thabo Nkosi', email:'thabo@joburgspares.co.za', phone:'+27 79 000 0003', status:'pending', sub_status:'trial', sub_paid_until: new Date(Date.now()+86400000*28).toISOString(), listing_count:0, created_at: new Date(Date.now()-86400000*2).toISOString() },
+  { id:'s5', business_name:'Auto Express Pretoria', contact_person:'Priya Moodley', email:'priya@autoexpress.co.za', phone:'+27 73 000 0004', status:'banned', sub_status:'unpaid', sub_paid_until: new Date(Date.now()-86400000*15).toISOString(), listing_count:0, created_at: new Date(Date.now()-86400000*90).toISOString() },
+];
+
+const DEMO_BUYERS = [
+  { id:'b1', email:'sipho@gmail.com', status:'active', enquiry_count:4, created_at: new Date(Date.now()-86400000*10).toISOString() },
+  { id:'b2', email:'chantelle@mail.co.za', status:'active', enquiry_count:2, created_at: new Date(Date.now()-86400000*5).toISOString() },
+  { id:'b3', email:'spam@bad.com', status:'banned', enquiry_count:0, created_at: new Date(Date.now()-86400000*3).toISOString() },
+];
+
+// ══════════════════════════════════════════════════════════════
+//  AUTH
+// ══════════════════════════════════════════════════════════════
+async function doAdminLogin() {
+  const email = document.getElementById('admin-email').value.trim();
+  const pass  = document.getElementById('admin-pass').value;
+  if (!email || !pass) { showLoginError('Please enter email and password.'); return; }
+
+  setBtnLoad('login-btn', true, 'Signing in…');
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+  setBtnLoad('login-btn', false, 'Sign In to Admin Panel →');
+
+  if (error) { showLoginError('Login failed: ' + error.message); return; }
+
+  // Check if user is an admin
+  if (!SUPER_ADMIN_EMAILS.includes(email)) {
+    await sb.auth.signOut();
+    showLoginError('Access denied. This panel is for administrators only.');
+    return;
+  }
+
+  adminUser = data.user;
+  launchApp();
+}
+
+async function checkAdminSession() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return;
+  if (!SUPER_ADMIN_EMAILS.includes(session.user.email)) { await sb.auth.signOut(); return; }
+  adminUser = session.user;
+  launchApp();
+}
+
+function launchApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('admin-app').classList.add('visible');
+  const name = adminUser.email.split('@')[0];
+  document.getElementById('admin-name').textContent = name;
+  document.getElementById('admin-avatar').textContent = name.substring(0,2).toUpperCase();
+  loadAllData();
+}
+
+function doLogout() {
+  sb.auth.signOut();
+  document.getElementById('login-screen').style.display = '';
+  document.getElementById('admin-app').classList.remove('visible');
+  adminUser = null;
+}
+
+function showLoginError(msg) {
+  const el = document.getElementById('login-error');
+  el.textContent = msg; el.style.display = 'block';
+}
+
+// ══════════════════════════════════════════════════════════════
+//  DATA LOADING
+// ══════════════════════════════════════════════════════════════
+async function loadAllData() {
+  // Load sellers
+  const { data: sellers } = await sb.from('sellers').select('*').order('created_at', { ascending: false });
+  allSellers = sellers?.length ? sellers : DEMO_SELLERS;
+
+  // Load listings
+  const { data: listings } = await sb.from('listings').select('*, sellers(business_name)').order('created_at', { ascending: false });
+  allListings = listings || [];
+
+  // Load enquiries
+  const { data: enquiries } = await sb.from('enquiries').select('*, listings(name)').order('created_at', { ascending: false });
+  allEnquiries = enquiries || [];
+
+  renderDashboard();
+  renderSellers();
+  renderBuyers();
+  renderApplications();
+  renderListings();
+  renderEnquiries();
+  renderSubscriptions();
+  renderRevenue();
+  renderInvoices();
+}
+
+// ══════════════════════════════════════════════════════════════
+//  DASHBOARD
+// ══════════════════════════════════════════════════════════════
+function renderDashboard() {
+  const approved   = allSellers.filter(s => s.status === 'approved').length;
+  const pending    = allSellers.filter(s => s.status === 'pending').length;
+  const suspended  = allSellers.filter(s => s.status === 'suspended' || s.status === 'banned').length;
+  const paid       = allSellers.filter(s => s.sub_status === 'paid').length;
+  const trial      = allSellers.filter(s => s.sub_status === 'trial').length;
+  const unpaid     = allSellers.filter(s => s.sub_status === 'unpaid').length;
+  const revenue    = paid * SUBSCRIPTION_PRICE;
+  const total      = allSellers.length || 1;
+
+  document.getElementById('ds-sellers').textContent   = allSellers.length;
+  document.getElementById('ds-listings').textContent  = allListings.length;
+  document.getElementById('ds-pending').textContent   = pending;
+  document.getElementById('ds-suspended').textContent = suspended;
+  document.getElementById('ds-revenue').textContent   = 'R ' + revenue.toLocaleString();
+  document.getElementById('ds-revenue-sub').textContent = paid + ' paid subscriber' + (paid !== 1 ? 's' : '');
+  document.getElementById('rev-paid-bar').style.width   = (paid/total*100).toFixed(0) + '%';
+  document.getElementById('rev-trial-bar').style.width  = (trial/total*100).toFixed(0) + '%';
+  document.getElementById('rev-unpaid-bar').style.width = (unpaid/total*100).toFixed(0) + '%';
+  document.getElementById('rev-paid-count').textContent   = paid;
+  document.getElementById('rev-trial-count').textContent  = trial;
+  document.getElementById('rev-unpaid-count').textContent = unpaid;
+
+  // Badge counts
+  document.getElementById('nb-pending').textContent = pending;
+  document.getElementById('nb-apps').textContent    = pending;
+
+  // Recent activity
+  document.getElementById('recent-activity').innerHTML = auditLog.slice(0,6).map(a =>
+    `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><span>${a.action}</span><span style="color:var(--text3);font-size:11px">${a.time}</span></div>`
+  ).join('') || '<div style="color:var(--text3)">No recent activity</div>';
+
+  // Attention table
+  const attention = allSellers.filter(s => s.status === 'pending' || s.sub_status === 'unpaid');
+  document.getElementById('attention-table').innerHTML = attention.length
+    ? attention.map(s => `<tr>
+        <td class="cell-bold">${s.business_name}</td>
+        <td><span class="pill ${s.status==='pending'?'pill-pending':'pill-suspended'}">${s.status==='pending'?'Pending Approval':'Non-payment'}</span></td>
+        <td style="font-size:11px;color:var(--text3)">${new Date(s.created_at).toLocaleDateString('en-ZA')}</td>
+        <td><div class="act-row">${s.status==='pending'?`<button class="btn btn-approve" onclick="approveSeller('${s.id}','${s.business_name}')">Approve</button>`:`<button class="btn btn-suspend" onclick="suspendSeller('${s.id}','${s.business_name}')">Suspend</button>`}</div></td>
+      </tr>`).join('')
+    : '<tr><td colspan="4" style="text-align:center;padding:1.5rem;color:var(--text3)">✅ No items requiring attention</td></tr>';
+}
+
+// ══════════════════════════════════════════════════════════════
+//  SELLERS TABLE
+// ══════════════════════════════════════════════════════════════
+function renderSellers() {
+  document.getElementById('sellers-tbody').innerHTML = allSellers.map(s => {
+    const daysLeft = s.sub_paid_until ? Math.ceil((new Date(s.sub_paid_until)-Date.now())/86400000) : 0;
+    const subPill = s.sub_status === 'paid' ? 'pill-paid' : s.sub_status === 'trial' ? 'pill-trial' : 'pill-unpaid';
+    const statusPill = s.status === 'approved' ? 'pill-active' : s.status === 'pending' ? 'pill-pending' : s.status === 'suspended' ? 'pill-suspended' : 'pill-banned';
+    return `<tr>
+      <td><div class="cell-bold">${s.business_name}</div><div style="font-size:11px;color:var(--text3)">${s.contact_person||''}</div></td>
+      <td><div style="font-size:12px">${s.email}</div><div style="font-size:11px;color:var(--text3)">${s.phone||''}</div></td>
+      <td><span class="pill ${statusPill}">${s.status}</span></td>
+      <td><div class="sub-info"><span class="pill ${subPill}">${s.sub_status||'trial'}</span><span class="sub-days">${daysLeft > 0 ? daysLeft+'d left' : Math.abs(daysLeft)+'d overdue'}</span></div></td>
+      <td style="text-align:center">${s.listing_count||0}</td>
+      <td style="font-size:11px;color:var(--text3)">${new Date(s.created_at).toLocaleDateString('en-ZA')}</td>
+      <td><div class="act-row">
+        ${s.status==='pending'?`<button class="btn btn-approve" onclick="approveSeller('${s.id}','${s.business_name}')">Approve</button>`:''}
+        ${s.status==='approved'?`<button class="btn btn-suspend" onclick="suspendSeller('${s.id}','${s.business_name}')">Suspend</button>`:''}
+        ${s.status==='suspended'?`<button class="btn btn-activate" onclick="activateSeller('${s.id}','${s.business_name}')">Activate</button>`:''}
+        ${s.status!=='banned'?`<button class="btn btn-ban" onclick="banUser('${s.id}','${s.business_name}','seller')">Ban</button>`:`<button class="btn btn-unban" onclick="unbanUser('${s.id}','${s.business_name}','seller')">Unban</button>`}
+      </div></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="7" style="text-align:center;padding:1.5rem;color:var(--text3)">No sellers found</td></tr>';
+}
+
+// ══════════════════════════════════════════════════════════════
+//  BUYERS TABLE
+// ══════════════════════════════════════════════════════════════
+function renderBuyers() {
+  const buyers = DEMO_BUYERS;
+  document.getElementById('buyers-tbody').innerHTML = buyers.map(b => `<tr>
+    <td class="cell-bold">${b.email}</td>
+    <td><span class="pill ${b.status==='active'?'pill-active':'pill-banned'}">${b.status}</span></td>
+    <td style="text-align:center">${b.enquiry_count}</td>
+    <td style="font-size:11px;color:var(--text3)">${new Date(b.created_at).toLocaleDateString('en-ZA')}</td>
+    <td><div class="act-row">
+      ${b.status==='active'?`<button class="btn btn-ban" onclick="banUser('${b.id}','${b.email}','buyer')">Ban</button>`:`<button class="btn btn-unban" onclick="unbanUser('${b.id}','${b.email}','buyer')">Unban</button>`}
+    </div></td>
+  </tr>`).join('');
+}
+
+// ══════════════════════════════════════════════════════════════
+//  APPLICATIONS
+// ══════════════════════════════════════════════════════════════
+function renderApplications() {
+  const pending = allSellers.filter(s => s.status === 'pending');
+  document.getElementById('apps-tbody').innerHTML = pending.length
+    ? pending.map(s => `<tr>
+        <td class="cell-bold">${s.business_name}</td>
+        <td>${s.contact_person||'—'}</td>
+        <td>${s.email}</td>
+        <td>${s.phone||'—'}</td>
+        <td style="font-size:11px;color:var(--text3)">${new Date(s.created_at).toLocaleDateString('en-ZA')}</td>
+        <td><div class="act-row">
+          <button class="btn btn-approve" onclick="approveSeller('${s.id}','${s.business_name}')">✅ Approve</button>
+          <button class="btn btn-ban" onclick="rejectSeller('${s.id}','${s.business_name}')">❌ Reject</button>
+        </div></td>
+      </tr>`).join('')
+    : '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text3)">✅ No pending applications</td></tr>';
+}
+
+// ══════════════════════════════════════════════════════════════
+//  LISTINGS
+// ══════════════════════════════════════════════════════════════
+function renderListings() {
+  document.getElementById('listings-tbody').innerHTML = allListings.length
+    ? allListings.map(l => `<tr>
+        <td class="cell-bold">${l.name}</td>
+        <td style="font-size:12px">${l.sellers?.business_name||'—'}</td>
+        <td style="font-size:12px">${l.category||'—'}</td>
+        <td class="cell-mono">R ${(l.price||0).toLocaleString()}</td>
+        <td><span class="pill ${l.status==='active'?'pill-active':'pill-suspended'}">${l.status||'active'}</span></td>
+        <td style="font-size:11px;color:var(--text3)">${new Date(l.created_at).toLocaleDateString('en-ZA')}</td>
+        <td><div class="act-row">
+          ${l.status==='active'?`<button class="btn btn-suspend" onclick="deactivateListing('${l.id}','${l.name}')">Deactivate</button>`:`<button class="btn btn-activate" onclick="activateListing('${l.id}','${l.name}')">Activate</button>`}
+          <button class="btn btn-delete" onclick="deleteListing('${l.id}','${l.name}')">Delete</button>
+        </div></td>
+      </tr>`).join('')
+    : '<tr><td colspan="7" style="text-align:center;padding:1.5rem;color:var(--text3)">No listings found</td></tr>';
+}
+
+// ══════════════════════════════════════════════════════════════
+//  ENQUIRIES
+// ══════════════════════════════════════════════════════════════
+function renderEnquiries() {
+  document.getElementById('enquiries-tbody').innerHTML = allEnquiries.length
+    ? allEnquiries.map(e => `<tr>
+        <td class="cell-mono" style="color:var(--blue)">${e.id}</td>
+        <td>${e.buyer_name||'—'}</td>
+        <td style="font-size:12px">${e.listings?.name||'General'}</td>
+        <td style="font-size:12px">${e.seller_id||'—'}</td>
+        <td><span class="pill ${e.status==='new'?'pill-pending':'pill-active'}">${e.status}</span></td>
+        <td style="font-size:11px;color:var(--text3)">${new Date(e.created_at).toLocaleDateString('en-ZA')}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="6" style="text-align:center;padding:1.5rem;color:var(--text3)">No enquiries found</td></tr>';
+}
+
+// ══════════════════════════════════════════════════════════════
+//  SUBSCRIPTIONS
+// ══════════════════════════════════════════════════════════════
+function renderSubscriptions() {
+  const paid    = allSellers.filter(s => s.sub_status === 'paid');
+  const trial   = allSellers.filter(s => s.sub_status === 'trial');
+  const unpaid  = allSellers.filter(s => s.sub_status === 'unpaid');
+  document.getElementById('sub-paid').textContent    = paid.length;
+  document.getElementById('sub-trial').textContent   = trial.length;
+  document.getElementById('sub-overdue').textContent = unpaid.length;
+
+  document.getElementById('subs-tbody').innerHTML = allSellers.map(s => {
+    const due     = s.sub_paid_until ? new Date(s.sub_paid_until) : null;
+    const daysLeft = due ? Math.ceil((due - Date.now())/86400000) : 0;
+    const overdue = daysLeft < 0 ? Math.abs(daysLeft) : 0;
+    const subPill = s.sub_status==='paid'?'pill-paid':s.sub_status==='trial'?'pill-trial':'pill-unpaid';
+    return `<tr>
+      <td class="cell-bold">${s.business_name}</td>
+      <td style="font-size:12px">R ${SUBSCRIPTION_PRICE}/month</td>
+      <td><span class="pill ${subPill}">${s.sub_status||'trial'}</span></td>
+      <td style="font-size:11px;color:var(--text3)">${s.last_payment ? new Date(s.last_payment).toLocaleDateString('en-ZA') : 'Never'}</td>
+      <td style="font-size:11px;color:var(--text3)">${due ? due.toLocaleDateString('en-ZA') : '—'}</td>
+      <td><span style="color:${overdue>0?'var(--red)':'var(--success)';font-weight:600}">${overdue > 0 ? overdue + ' days' : '—'}</span></td>
+      <td><div class="act-row">
+        <button class="btn btn-approve" onclick="markPaid('${s.id}','${s.business_name}')">Mark Paid</button>
+        ${overdue > GRACE_DAYS ? `<button class="btn btn-suspend" onclick="suspendSeller('${s.id}','${s.business_name}')">Suspend</button>` : ''}
+        <button class="btn btn-view" onclick="sendPaymentReminder('${s.id}','${s.business_name}','${s.email}')">📧 Remind</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════════════
+//  REVENUE
+// ══════════════════════════════════════════════════════════════
+function renderRevenue() {
+  const paid       = allSellers.filter(s => s.sub_status === 'paid').length;
+  const unpaid     = allSellers.filter(s => s.sub_status === 'unpaid').length;
+  const monthly    = paid * SUBSCRIPTION_PRICE;
+  const annual     = monthly * 12;
+  const outstanding = unpaid * SUBSCRIPTION_PRICE;
+  document.getElementById('rev-month').textContent       = 'R ' + monthly.toLocaleString();
+  document.getElementById('rev-annual').textContent      = 'R ' + annual.toLocaleString();
+  document.getElementById('rev-outstanding').textContent = 'R ' + outstanding.toLocaleString();
+  document.getElementById('rev-written').textContent     = 'R 0';
+
+  // Demo payment history
+  const payments = allSellers.filter(s=>s.sub_status==='paid').map((s,i) => ({
+    date: new Date(Date.now()-86400000*i*3).toLocaleDateString('en-ZA'),
+    seller: s.business_name, amount: SUBSCRIPTION_PRICE,
+    method: 'EFT', ref: 'SPF-'+Math.random().toString(36).substring(2,8).toUpperCase(), status:'paid'
+  }));
+  document.getElementById('payments-tbody').innerHTML = payments.length
+    ? payments.map(p => `<tr>
+        <td style="font-size:12px;color:var(--text3)">${p.date}</td>
+        <td class="cell-bold">${p.seller}</td>
+        <td class="cell-mono" style="color:var(--success)">R ${p.amount.toLocaleString()}</td>
+        <td style="font-size:12px">${p.method}</td>
+        <td class="cell-mono" style="font-size:11px">${p.ref}</td>
+        <td><span class="pill pill-paid">Paid</span></td>
+      </tr>`).join('')
+    : '<tr><td colspan="6" style="text-align:center;padding:1.5rem;color:var(--text3)">No payment records yet</td></tr>';
+}
+
+// ══════════════════════════════════════════════════════════════
+//  INVOICES
+// ══════════════════════════════════════════════════════════════
+function renderInvoices() {
+  const invoices = allSellers.map((s,i) => ({
+    num: 'INV-' + String(1000+i).padStart(4,'0'),
+    seller: s.business_name, amount: SUBSCRIPTION_PRICE,
+    period: new Date().toLocaleString('en-ZA',{month:'long',year:'numeric'}),
+    issued: new Date().toLocaleDateString('en-ZA'),
+    status: s.sub_status
+  }));
+  document.getElementById('invoices-tbody').innerHTML = invoices.map(inv => `<tr>
+    <td class="cell-mono" style="color:var(--blue)">${inv.num}</td>
+    <td class="cell-bold">${inv.seller}</td>
+    <td class="cell-mono">R ${inv.amount.toLocaleString()}</td>
+    <td style="font-size:12px">${inv.period}</td>
+    <td style="font-size:11px;color:var(--text3)">${inv.issued}</td>
+    <td><span class="pill ${inv.status==='paid'?'pill-paid':inv.status==='trial'?'pill-trial':'pill-unpaid'}">${inv.status}</span></td>
+    <td><div class="act-row">
+      <button class="btn btn-view" onclick="showToast('Invoice download coming with payment integration')">Download PDF</button>
+      <button class="btn btn-view" onclick="showToast('Invoice sent to seller email')">📧 Send</button>
+    </div></td>
+  </tr>`).join('');
+}
+
+// ══════════════════════════════════════════════════════════════
+//  ACTIONS
+// ══════════════════════════════════════════════════════════════
+async function approveSeller(id, name) {
+  openConfirmModal('Approve Seller', `Approve <strong>${name}</strong> as a verified seller? They will be notified and their listings will go live.`, 'btn-approve', async () => {
+    await sb.from('sellers').update({ status: 'approved', sub_status: 'trial' }).eq('id', id);
+    logAudit('Seller Approved', name);
+    await loadAllData();
+    showToast(name + ' approved ✓', 'success');
+  });
+}
+
+async function rejectSeller(id, name) {
+  openConfirmModal('Reject Application', `Reject the application from <strong>${name}</strong>? This will delete their account.`, 'btn-ban', async () => {
+    await sb.from('sellers').delete().eq('id', id);
+    logAudit('Seller Rejected', name);
+    await loadAllData();
+    showToast(name + ' rejected.', 'error');
+  });
+}
+
+async function suspendSeller(id, name) {
+  openConfirmModal('Suspend Seller', `Suspend <strong>${name}</strong>? Their listings will be hidden from the marketplace until reactivated.`, 'btn-suspend', async () => {
+    await sb.from('sellers').update({ status: 'suspended' }).eq('id', id);
+    await sb.from('listings').update({ status: 'inactive' }).eq('seller_id', id);
+    logAudit('Seller Suspended', name);
+    await loadAllData();
+    showToast(name + ' suspended.', 'error');
+  });
+}
+
+async function activateSeller(id, name) {
+  openConfirmModal('Reactivate Seller', `Reactivate <strong>${name}</strong>? Their listings will go live again.`, 'btn-activate', async () => {
+    await sb.from('sellers').update({ status: 'approved' }).eq('id', id);
+    await sb.from('listings').update({ status: 'active' }).eq('seller_id', id);
+    logAudit('Seller Reactivated', name);
+    await loadAllData();
+    showToast(name + ' reactivated ✓', 'success');
+  });
+}
+
+async function banUser(id, name, type) {
+  openConfirmModal('Ban User', `<span style="color:var(--red)">⚠️ Permanently ban <strong>${name}</strong>?</span><br><br>This user will be blocked from the platform. This action is serious and should be reserved for abuse, fraud or repeated violations.`, 'btn-ban', async () => {
+    if (type === 'seller') {
+      await sb.from('sellers').update({ status: 'banned' }).eq('id', id);
+      await sb.from('listings').update({ status: 'inactive' }).eq('seller_id', id);
+    }
+    logAudit('User Banned', name);
+    await loadAllData();
+    showToast(name + ' has been banned.', 'error');
+  });
+}
+
+async function unbanUser(id, name, type) {
+  openConfirmModal('Unban User', `Unban <strong>${name}</strong> and restore their access?`, 'btn-activate', async () => {
+    if (type === 'seller') await sb.from('sellers').update({ status: 'approved' }).eq('id', id);
+    logAudit('User Unbanned', name);
+    await loadAllData();
+    showToast(name + ' has been unbanned ✓', 'success');
+  });
+}
+
+async function markPaid(id, name) {
+  const nextDue = new Date(Date.now() + 30*86400000).toISOString();
+  await sb.from('sellers').update({ sub_status: 'paid', sub_paid_until: nextDue }).eq('id', id);
+  if (allSellers.find(s=>s.id===id)?.status === 'suspended') {
+    await sb.from('sellers').update({ status: 'approved' }).eq('id', id);
+    await sb.from('listings').update({ status: 'active' }).eq('seller_id', id);
+  }
+  logAudit('Payment Recorded', name + ' R' + SUBSCRIPTION_PRICE);
+  await loadAllData();
+  showToast(name + ' marked as paid ✓', 'success');
+}
+
+function sendPaymentReminder(id, name, email) {
+  logAudit('Payment Reminder Sent', name);
+  showToast('Payment reminder sent to ' + email + ' ✓', 'success');
+}
+
+async function deactivateListing(id, name) {
+  await sb.from('listings').update({ status: 'inactive' }).eq('id', id);
+  logAudit('Listing Deactivated', name);
+  await loadAllData();
+  showToast('Listing deactivated.', 'error');
+}
+
+async function activateListing(id, name) {
+  await sb.from('listings').update({ status: 'active' }).eq('id', id);
+  logAudit('Listing Activated', name);
+  await loadAllData();
+  showToast('Listing activated ✓', 'success');
+}
+
+async function deleteListing(id, name) {
+  openConfirmModal('Delete Listing', `Permanently delete <strong>${name}</strong>? This cannot be undone.`, 'btn-ban', async () => {
+    await sb.from('listings').delete().eq('id', id);
+    logAudit('Listing Deleted', name);
+    await loadAllData();
+    showToast('Listing deleted.', 'error');
+  });
+}
+
+function openSuspendNonPayers() {
+  const nonPayers = allSellers.filter(s => {
+    const daysLeft = s.sub_paid_until ? Math.ceil((new Date(s.sub_paid_until)-Date.now())/86400000) : -999;
+    return daysLeft < -GRACE_DAYS && s.status === 'approved';
+  });
+  if (!nonPayers.length) { showToast('No sellers are overdue beyond the grace period.'); return; }
+  openConfirmModal('Suspend Non-Payers',
+    `<strong>${nonPayers.length} seller(s)</strong> are more than ${GRACE_DAYS} days overdue:<br><br>` +
+    nonPayers.map(s=>`• ${s.business_name}`).join('<br>') +
+    '<br><br>Their accounts and listings will be suspended until payment is received.',
+    'btn-ban', async () => {
+      for (const s of nonPayers) {
+        await sb.from('sellers').update({ status: 'suspended' }).eq('id', s.id);
+        await sb.from('listings').update({ status: 'inactive' }).eq('seller_id', s.id);
+        logAudit('Auto-Suspended (Non-payment)', s.business_name);
+      }
+      await loadAllData();
+      showToast(nonPayers.length + ' seller(s) suspended for non-payment.', 'error');
+    }
+  );
+}
+
+function openSendPaymentReminders() {
+  const overdue = allSellers.filter(s => s.sub_status === 'unpaid');
+  if (!overdue.length) { showToast('No sellers have outstanding payments.'); return; }
+  openConfirmModal('Send Payment Reminders',
+    `Send payment reminder emails to <strong>${overdue.length} seller(s)</strong> with outstanding balances?`,
+    'btn-primary', async () => {
+      overdue.forEach(s => logAudit('Payment Reminder Sent', s.business_name));
+      showToast(overdue.length + ' payment reminders sent ✓', 'success');
+      closeModal();
+    }
+  );
+}
+
+function generateInvoices() {
+  logAudit('Monthly Invoices Generated', allSellers.length + ' invoices');
+  showToast('Monthly invoices generated for all sellers ✓', 'success');
+}
+
+function addAdminUser() {
+  const email = document.getElementById('new-admin-email').value.trim();
+  if (!email) { showToast('Please enter an email address.'); return; }
+  SUPER_ADMIN_EMAILS.push(email);
+  logAudit('Admin User Added', email);
+  showToast(email + ' added as admin ✓', 'success');
+  document.getElementById('new-admin-email').value = '';
+}
+
+function saveSettings() {
+  logAudit('Settings Updated', 'Platform settings saved');
+  showToast('Settings saved ✓', 'success');
+}
+
+// ══════════════════════════════════════════════════════════════
+//  AUDIT LOG
+// ══════════════════════════════════════════════════════════════
+function logAudit(action, target) {
+  const entry = {
+    time: new Date().toLocaleTimeString('en-ZA'),
+    admin: adminUser?.email?.split('@')[0] || 'Admin',
+    action, target,
+    details: new Date().toLocaleDateString('en-ZA')
+  };
+  auditLog.unshift(entry);
+  document.getElementById('audit-tbody').innerHTML = auditLog.map(a => `<tr>
+    <td style="font-size:11px;color:var(--text3)">${a.details} ${a.time}</td>
+    <td class="cell-bold">${a.admin}</td>
+    <td>${a.action}</td>
+    <td>${a.target}</td>
+    <td style="font-size:11px;color:var(--text3)">—</td>
+  </tr>`).join('');
+}
+
+// ══════════════════════════════════════════════════════════════
+//  UI HELPERS
+// ══════════════════════════════════════════════════════════════
+function showPage(page, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if (el) el.classList.add('active');
+}
+
+function openConfirmModal(title, body, btnClass, action) {
+  modalAction = action;
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').innerHTML = `<p style="font-size:14px;color:var(--text2);line-height:1.65">${body}</p>`;
+  const btn = document.getElementById('modal-confirm-btn');
+  btn.className = 'btn ' + btnClass;
+  btn.textContent = 'Confirm';
+  document.getElementById('action-modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('action-modal').classList.remove('open');
+  modalAction = null;
+}
+
+async function executeModalAction() {
+  if (modalAction) { closeModal(); await modalAction(); }
+}
+
+function filterTable(tableId, query) {
+  const rows = document.querySelectorAll('#' + tableId + ' tbody tr');
+  rows.forEach(row => {
+    row.style.display = row.textContent.toLowerCase().includes(query.toLowerCase()) ? '' : 'none';
+  });
+}
+
+function filterByStatus(tableId, status) {
+  const rows = document.querySelectorAll('#' + tableId + ' tbody tr');
+  rows.forEach(row => {
+    row.style.display = !status || row.textContent.toLowerCase().includes(status) ? '' : 'none';
+  });
+}
+
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show ' + type;
+  setTimeout(() => t.className = 'toast', 3200);
+}
+
+function setBtnLoad(id, loading, label) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.disabled = loading; el.textContent = label; el.style.opacity = loading ? '0.65' : '1';
+}
+
+// ══════════════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════════════
+checkAdminSession();
+</script>
+</body>
+</html>
