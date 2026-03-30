@@ -1,0 +1,88 @@
+{
+  "name": "Spare Parts Finder",
+  "short_name": "SPF Marketplace",
+  "description": "South Africa's trusted auto spare parts marketplace. Buy and sell new, used and salvage vehicle parts from verified local sellers.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1e5bb0",
+  "theme_color": "#1e5bb0",
+  "lang": "en-ZA",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/icons/icon-72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "https://res.cloudinary.com/dnr82g2yo/image/upload/v1774891962/Spare-Parts-Finder-Market-Banner-1920x780-5_b3v3wk.jpg",
+      "sizes": "1920x780",
+      "type": "image/jpeg",
+      "form_factor": "wide",
+      "label": "Spare Parts Finder Marketplace"
+    }
+  ],
+  "categories": ["shopping", "automotive"],
+  "shortcuts": [
+    {
+      "name": "Browse Parts",
+      "short_name": "Browse",
+      "description": "Search and browse auto parts",
+      "url": "/?view=browse",
+      "icons": [{ "src": "/icons/icon-96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Sell a Part",
+      "short_name": "Sell",
+      "description": "List a part for sale",
+      "url": "/?view=list",
+      "icons": [{ "src": "/icons/icon-96.png", "sizes": "96x96" }]
+    }
+  ]
+}
