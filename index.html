@@ -551,11 +551,12 @@ footer{background:var(--blue3);padding:2rem 1.5rem 1.25rem;margin-top:3rem}
       </div>
       <div class="form-row"><label>Description</label><textarea placeholder="Condition, fitment notes, mileage (if used), any defects…"></textarea></div>
       <div class="sec-title" style="margin-top:1.25rem">Photos &amp; Pricing</div>
-      <div class="upload-area" onclick="showToast('Connect Cloudinary to enable uploads — see Setup Guide.')">
+      <div class="upload-area" id="public-upload-area">
         <div class="upload-icon">📷</div>
         <div class="upload-text">Upload Part Photos</div>
         <div class="upload-sub">Drag &amp; drop or click · JPG/PNG up to 10MB · Up to 8 photos</div>
       </div>
+      <div id="public-upload-thumbs" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"></div>
       <div class="form-2">
         <div class="form-row"><label>Asking Price (ZAR) *</label><input type="number" placeholder="0.00"></div>
         <div class="form-row"><label>Price Type</label><select><option>Fixed Price</option><option>Negotiable</option><option>Price on Application</option></select></div>
@@ -1579,9 +1580,56 @@ function updateListModel(){
   if(make&&SA_VEHICLE_DATA[make])SA_VEHICLE_DATA[make].forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;sel.appendChild(o);});
 }
 
+
+// ══ PUBLIC LIST A PART UPLOAD ══
+function wirePublicUploadArea() {
+  const area = document.getElementById('public-upload-area');
+  if (!area) return;
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'image/*'; inp.multiple = true; inp.style.display = 'none';
+  area.appendChild(inp);
+  area.addEventListener('click', () => inp.click());
+  area.addEventListener('dragover', e => { e.preventDefault(); area.style.borderColor = 'var(--blue)'; });
+  area.addEventListener('dragleave', () => area.style.borderColor = '');
+  area.addEventListener('drop', e => { e.preventDefault(); area.style.borderColor = ''; handlePublicImageFiles(e.dataTransfer.files); });
+  inp.addEventListener('change', () => handlePublicImageFiles(inp.files));
+}
+
+let publicUploadedUrls = [];
+
+async function handlePublicImageFiles(files) {
+  if (!files || !files.length) return;
+  const fileArr = Array.from(files);
+  showToast('Uploading ' + fileArr.length + ' photo(s)…');
+  for (const file of fileArr) {
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('upload_preset', CLOUDINARY_PRESET);
+    try {
+      const res = await fetch('https://api.cloudinary.com/v1_1/' + CLOUDINARY_CLOUD + '/image/upload', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.secure_url) {
+        publicUploadedUrls.push(data.secure_url);
+        const wrap = document.getElementById('public-upload-thumbs');
+        if (wrap) {
+          const img = document.createElement('img');
+          img.src = data.secure_url;
+          img.style.cssText = 'width:70px;height:52px;object-fit:cover;border-radius:6px;border:2px solid var(--blue)';
+          wrap.appendChild(img);
+        }
+        showToast(publicUploadedUrls.length + ' photo(s) ready ✓');
+      } else if (data.error) {
+        showToast('Upload error: ' + data.error.message);
+      }
+    } catch(e) { showToast('Upload failed: ' + e.message); }
+  }
+}
+
+
 // ══ INIT ══
 populateDropdowns();
 wireUploadArea();
+wirePublicUploadArea();
 loadListings();
 checkSession();
 </script>
