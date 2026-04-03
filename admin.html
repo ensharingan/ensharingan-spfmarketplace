@@ -1222,15 +1222,40 @@ async function submitRegisterSeller() {
   btn.disabled = true; btn.textContent = 'Creating account…';
 
   try {
-    // Create auth user via Supabase sign up
+    // Try to create auth user — if already exists, find their ID
+    let userId = null;
     const { data: authData, error: authError } = await sb.auth.signUp({
       email, password: pass,
       options: { data: { full_name: contact, role: 'seller' } }
     });
 
-    if (authError) { showToast('Auth error: ' + authError.message); btn.disabled=false; btn.textContent='✅ Create Seller Account'; return; }
+    if (authError && authError.message.includes('already registered')) {
+      // User exists — find their ID from sellers table or auth
+      const { data: existing } = await sb.from('sellers').select('user_id').eq('email', email).single();
+      if (existing?.user_id) {
+        // Seller record already exists — just update it
+        const { error: updateError } = await sb.from('sellers').update({
+          business_name: biz, contact_person: contact, phone,
+          status: 'approved', whatsapp_enabled: true,
+          sub_status: subStatus, sub_paid_until: subPaidUntil,
+          address: { city: province, street: address }
+        }).eq('email', email);
+        logAudit('Seller Updated', biz + ' (' + email + ')');
+        closeRegisterModal();
+        await loadAllData();
+        showToast('✅ ' + biz + ' seller record updated!', 'success');
+        btn.disabled=false; btn.textContent='✅ Create Seller Account';
+        return;
+      }
+      // Auth user exists but no seller record — get user ID via admin lookup
+      showToast('User exists — creating seller record. Check Supabase for user ID.');
+      btn.disabled=false; btn.textContent='✅ Create Seller Account';
+      return;
+    } else if (authError) {
+      showToast('Auth error: ' + authError.message); btn.disabled=false; btn.textContent='✅ Create Seller Account'; return;
+    }
 
-    const userId = authData.user?.id;
+    userId = authData.user?.id;
     if (!userId) { showToast('Could not create user.'); btn.disabled=false; btn.textContent='✅ Create Seller Account'; return; }
 
     // Create seller record
