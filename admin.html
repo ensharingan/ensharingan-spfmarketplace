@@ -192,6 +192,7 @@ textarea{resize:vertical;min-height:80px}
 
       <div class="nav-section">Platform</div>
       <div class="nav-item" onclick="showPage('listings',this)"><span class="nav-icon">📦</span>All Listings</div>
+      <div class="nav-item" onclick="showPage('bulkupload',this)"><span class="nav-icon">📤</span>Bulk Upload</div>
       <div class="nav-item" onclick="showPage('enquiries',this)"><span class="nav-icon">🔔</span>Enquiries</div>
       <div class="nav-item" onclick="showPage('subscriptions',this)"><span class="nav-icon">💳</span>Subscriptions</div>
 
@@ -250,6 +251,7 @@ textarea{resize:vertical;min-height:80px}
         <div class="table-hd">
           <span class="table-title">All Sellers</span>
           <div class="table-actions">
+            <button class="btn btn-primary" onclick="openRegisterSeller()">+ Register Seller</button>
             <input class="search-input" placeholder="Search seller…" oninput="filterTable('sellers-table',this.value)">
             <select class="filter-select" onchange="filterByStatus('sellers-table',this.value)">
               <option value="">All Status</option>
@@ -451,6 +453,101 @@ textarea{resize:vertical;min-height:80px}
       </div>
     </div>
 
+
+    <!-- ── BULK UPLOAD ── -->
+    <div class="page" id="page-bulkupload">
+      <div class="page-title">Bulk Upload Listings</div>
+      
+      <div class="info-grid">
+        <div class="info-card">
+          <div class="info-card-title">📤 Upload CSV File</div>
+          <div style="font-size:13px;color:var(--text2);margin-bottom:1rem;line-height:1.65">
+            Supports <strong>WooCommerce CSV</strong> export format or <strong>SPF Custom CSV</strong> template.<br>
+            Images can be URLs in the CSV — they'll be imported automatically.
+          </div>
+          
+          <div style="margin-bottom:12px">
+            <label>Assign to Seller</label>
+            <select id="bulk-seller-id" style="margin-bottom:0">
+              <option value="">Select a seller…</option>
+            </select>
+          </div>
+
+          <div style="margin-bottom:12px">
+            <label>CSV Format</label>
+            <select id="bulk-csv-format" style="margin-bottom:0">
+              <option value="auto">Auto-detect</option>
+              <option value="woocommerce">WooCommerce Export</option>
+              <option value="spf">SPF Custom Template</option>
+            </select>
+          </div>
+
+          <div id="bulk-drop-area" style="border:2px dashed var(--border2);border-radius:var(--rl);padding:2rem;text-align:center;cursor:pointer;transition:all .15s;margin-bottom:12px" 
+               onclick="document.getElementById('bulk-file-inp').click()"
+               ondragover="event.preventDefault();this.style.borderColor='var(--blue)';this.style.background='var(--blue-dim)'"
+               ondragleave="this.style.borderColor='';this.style.background=''"
+               ondrop="event.preventDefault();this.style.borderColor='';this.style.background='';handleBulkFile(event.dataTransfer.files[0])">
+            <div style="font-size:2rem;margin-bottom:.5rem">📄</div>
+            <div style="font-family:var(--font-h);font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text2)">Drop CSV here or click to browse</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:4px">.csv files only</div>
+          </div>
+          <input type="file" id="bulk-file-inp" accept=".csv" style="display:none" onchange="handleBulkFile(this.files[0])">
+
+          <div style="display:flex;gap:8px">
+            <a href="#" onclick="downloadSPFTemplate();return false" class="btn btn-view" style="flex:1;text-align:center;padding:8px">⬇ SPF Template</a>
+            <a href="#" onclick="downloadWooTemplate();return false" class="btn btn-view" style="flex:1;text-align:center;padding:8px">⬇ WooCommerce Guide</a>
+          </div>
+        </div>
+
+        <div class="info-card">
+          <div class="info-card-title">📋 SPF CSV Column Guide</div>
+          <table style="width:100%;font-size:12px">
+            <thead><tr><th style="text-align:left;padding:4px;color:var(--text3);font-weight:700">Column</th><th style="text-align:left;padding:4px;color:var(--text3);font-weight:700">Example</th></tr></thead>
+            <tbody>
+              <tr style="border-top:1px solid var(--border)"><td style="padding:5px 4px;font-weight:600">name</td><td style="padding:5px 4px;color:var(--text3)">BMW M3 Alternator</td></tr>
+              <tr style="border-top:1px solid var(--border)"><td style="padding:5px 4px;font-weight:600">category</td><td style="padding:5px 4px;color:var(--text3)">Engine & Components</td></tr>
+              <tr style="border-top:1px solid var(--border)"><td style="padding:5px 4px;font-weight:600">make</td><td style="padding:5px 4px;color:var(--text3)">BMW</td></tr>
+              <tr style="border-top:1px solid var(--border)"><td style="padding:5px 4px;font-weight:600">model</td><td style="padding:5px 4px;color:var(--text3)">3 Series</td></tr>
+              <tr style="border-top:1px solid var(--border)"><td style="padding:5px 4px;font-weight:600">year_start</td><td style="padding:5px 4px;color:var(--text3)">2010</td></tr>
+              <tr style="border-top:1px solid var(--border)"><td style="padding:5px 4px;font-weight:600">year_end</td><td style="padding:5px 4px;color:var(--text3)">2018</td></tr>
+              <tr style="border-top:1px solid var(--border)"><td style="padding:5px 4px;font-weight:600">condition</td><td style="padding:5px 4px;color:var(--text3)">Used / New</td></tr>
+              <tr style="border-top:1px solid var(--border)"><td style="padding:5px 4px;font-weight:600">price</td><td style="padding:5px 4px;color:var(--text3)">4500</td></tr>
+              <tr style="border-top:1px solid var(--border)"><td style="padding:5px 4px;font-weight:600">sku</td><td style="padding:5px 4px;color:var(--text3)">BMW-ALT-101</td></tr>
+              <tr style="border-top:1px solid var(--border)"><td style="padding:5px 4px;font-weight:600">description</td><td style="padding:5px 4px;color:var(--text3)">Pulled from low mileage donor...</td></tr>
+              <tr style="border-top:1px solid var(--border)"><td style="padding:5px 4px;font-weight:600">location</td><td style="padding:5px 4px;color:var(--text3)">Johannesburg</td></tr>
+              <tr style="border-top:1px solid var(--border)"><td style="padding:5px 4px;font-weight:600">shipping</td><td style="padding:5px 4px;color:var(--text3)">Collection / Courier / Both</td></tr>
+              <tr style="border-top:1px solid var(--border)"><td style="padding:5px 4px;font-weight:600">image_url</td><td style="padding:5px 4px;color:var(--text3)">https://example.com/img.jpg</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Preview Table -->
+      <div class="table-card" id="bulk-preview-card" style="display:none">
+        <div class="table-hd">
+          <span class="table-title" id="bulk-preview-title">Preview — 0 listings</span>
+          <div class="table-actions">
+            <button class="btn btn-view" onclick="cancelBulkUpload()">✕ Cancel</button>
+            <button class="btn btn-primary" onclick="importBulkListings()" id="bulk-import-btn">⚡ Import All Listings</button>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>#</th><th>Part Name</th><th>Make/Model</th><th>Category</th><th>Condition</th><th>Price</th><th>Image</th><th>Status</th></tr></thead>
+          <tbody id="bulk-preview-tbody"></tbody>
+        </table>
+      </div>
+
+      <!-- Import Progress -->
+      <div id="bulk-progress-card" style="display:none;background:#fff;border:1.5px solid var(--border);border-radius:var(--rxl);padding:2rem;text-align:center;box-shadow:var(--shadow)">
+        <div style="font-size:2rem;margin-bottom:.75rem">⏳</div>
+        <div style="font-family:var(--font-h);font-size:18px;font-weight:800;text-transform:uppercase;color:var(--blue);margin-bottom:.5rem" id="bulk-progress-title">Importing listings…</div>
+        <div style="background:var(--bg);border-radius:20px;height:10px;overflow:hidden;margin:1rem auto;max-width:400px;border:1px solid var(--border)">
+          <div id="bulk-progress-bar" style="height:100%;background:var(--blue);border-radius:20px;width:0%;transition:width .3s ease"></div>
+        </div>
+        <div id="bulk-progress-text" style="font-size:13px;color:var(--text3)">0 of 0 listings imported</div>
+      </div>
+    </div>
+
   </div><!-- /main -->
 </div><!-- /app -->
 
@@ -465,6 +562,48 @@ textarea{resize:vertical;min-height:80px}
     <div class="modal-footer">
       <button class="btn btn-view" onclick="closeModal()">Cancel</button>
       <button class="btn btn-primary" id="modal-confirm-btn" onclick="executeModalAction()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── REGISTER SELLER MODAL ── -->
+<div class="overlay" id="register-seller-modal" onclick="if(event.target===this)closeRegisterModal()">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-hd" style="background:var(--success)">
+      <span class="modal-title">Register New Seller</span>
+      <button class="modal-close" onclick="closeRegisterModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label>Business Name *</label><input type="text" id="rs-biz" placeholder="e.g. Premium Parts Corp"></div>
+        <div><label>Contact Person *</label><input type="text" id="rs-contact" placeholder="Full name"></div>
+        <div><label>Email Address *</label><input type="email" id="rs-email" placeholder="seller@business.co.za"></div>
+        <div><label>Phone / WhatsApp *</label><input type="tel" id="rs-phone" placeholder="+27 82 000 0000"></div>
+        <div><label>Province</label>
+          <select id="rs-province">
+            <option>Gauteng</option><option>Western Cape</option><option>KwaZulu-Natal</option>
+            <option>Eastern Cape</option><option>Limpopo</option><option>Mpumalanga</option>
+            <option>North West</option><option>Free State</option><option>Northern Cape</option>
+          </select>
+        </div>
+        <div><label>Subscription Status</label>
+          <select id="rs-sub">
+            <option value="trial">30-Day Free Trial</option>
+            <option value="paid">Paid — R499/month</option>
+            <option value="unpaid">Unpaid</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:8px"><label>Business Address</label><input type="text" id="rs-address" placeholder="Street, suburb, city"></div>
+      <div style="margin-top:8px"><label>Temporary Password *</label><input type="password" id="rs-pass" placeholder="Min 8 characters" value="SpfSeller2024!"></div>
+      <div style="background:var(--blue-dim);border:1px solid var(--blue-mid);border-radius:var(--r);padding:10px 12px;font-size:12px;color:var(--text2);margin-top:10px;line-height:1.6">
+        ℹ️ The seller will receive their login email and temporary password. They should change their password on first login.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-view" onclick="closeRegisterModal()">Cancel</button>
+      <button class="btn btn-approve" id="rs-submit-btn" onclick="submitRegisterSeller()">✅ Create Seller Account</button>
     </div>
   </div>
 </div>
@@ -578,6 +717,7 @@ async function loadAllData() {
 
   renderDashboard();
   renderSellers();
+  populateBulkSellerDropdown();
   renderBuyers();
   renderApplications();
   renderListings();
@@ -1050,6 +1190,281 @@ function setBtnLoad(id, loading, label) {
   if (!el) return;
   el.disabled = loading; el.textContent = label; el.style.opacity = loading ? '0.65' : '1';
 }
+
+
+
+// ══════════════════════════════════════════════════════════════
+//  REGISTER SELLER
+// ══════════════════════════════════════════════════════════════
+function openRegisterSeller() {
+  document.getElementById('register-seller-modal').classList.add('open');
+}
+function closeRegisterModal() {
+  document.getElementById('register-seller-modal').classList.remove('open');
+}
+
+async function submitRegisterSeller() {
+  const biz     = document.getElementById('rs-biz').value.trim();
+  const contact = document.getElementById('rs-contact').value.trim();
+  const email   = document.getElementById('rs-email').value.trim();
+  const phone   = document.getElementById('rs-phone').value.trim();
+  const pass    = document.getElementById('rs-pass').value;
+  const province= document.getElementById('rs-province').value;
+  const address = document.getElementById('rs-address').value.trim();
+  const subStatus = document.getElementById('rs-sub').value;
+
+  if (!biz || !contact || !email || !phone || !pass) {
+    showToast('Please fill in all required fields.'); return;
+  }
+  if (pass.length < 8) { showToast('Password must be at least 8 characters.'); return; }
+
+  const btn = document.getElementById('rs-submit-btn');
+  btn.disabled = true; btn.textContent = 'Creating account…';
+
+  try {
+    // Create auth user via Supabase sign up
+    const { data: authData, error: authError } = await sb.auth.signUp({
+      email, password: pass,
+      options: { data: { full_name: contact, role: 'seller' } }
+    });
+
+    if (authError) { showToast('Auth error: ' + authError.message); btn.disabled=false; btn.textContent='✅ Create Seller Account'; return; }
+
+    const userId = authData.user?.id;
+    if (!userId) { showToast('Could not create user.'); btn.disabled=false; btn.textContent='✅ Create Seller Account'; return; }
+
+    // Create seller record
+    const subPaidUntil = subStatus === 'trial'
+      ? new Date(Date.now() + 30*86400000).toISOString()
+      : subStatus === 'paid'
+      ? new Date(Date.now() + 30*86400000).toISOString()
+      : null;
+
+    const { error: sellerError } = await sb.from('sellers').insert({
+      user_id: userId,
+      business_name: biz,
+      contact_person: contact,
+      email, phone,
+      status: 'approved',
+      whatsapp_enabled: true,
+      sub_status: subStatus,
+      sub_paid_until: subPaidUntil,
+      address: { city: province, street: address }
+    });
+
+    if (sellerError) { showToast('Seller record error: ' + sellerError.message); btn.disabled=false; btn.textContent='✅ Create Seller Account'; return; }
+
+    logAudit('Seller Registered', biz + ' (' + email + ')');
+    closeRegisterModal();
+    await loadAllData();
+    showToast('✅ ' + biz + ' registered successfully! Login: ' + email, 'success');
+
+    // Clear form
+    ['rs-biz','rs-contact','rs-email','rs-phone','rs-address'].forEach(id => {
+      const el = document.getElementById(id); if(el) el.value = '';
+    });
+    document.getElementById('rs-pass').value = 'SpfSeller2024!';
+
+  } catch(err) {
+    showToast('Error: ' + err.message);
+  }
+  btn.disabled=false; btn.textContent='✅ Create Seller Account';
+}
+
+// ══════════════════════════════════════════════════════════════
+//  BULK UPLOAD
+// ══════════════════════════════════════════════════════════════
+let bulkParsedListings = [];
+
+function populateBulkSellerDropdown() {
+  const sel = document.getElementById('bulk-seller-id');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">Select a seller…</option>';
+  allSellers.forEach(s => {
+    const o = document.createElement('option');
+    o.value = s.id; o.textContent = s.business_name + ' (' + s.email + ')';
+    sel.appendChild(o);
+  });
+}
+
+function handleBulkFile(file) {
+  if (!file) return;
+  const format = document.getElementById('bulk-csv-format').value;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const text = e.target.result;
+    const rows = parseCSV(text);
+    if (rows.length < 2) { showToast('CSV appears empty or invalid.'); return; }
+    const headers = rows[0].map(h => h.toLowerCase().trim().replace(/\s+/g,'_'));
+    const isWoo = headers.includes('post_title') || headers.includes('regular_price') || headers.includes('_regular_price');
+    const listings = rows.slice(1).filter(r => r.some(c => c.trim())).map(row => {
+      const obj = {};
+      headers.forEach((h, i) => obj[h] = (row[i] || '').trim());
+      if (isWoo || format === 'woocommerce') return mapWooToSPF(obj);
+      return mapSPFCsv(obj);
+    }).filter(l => l.name);
+    bulkParsedListings = listings;
+    showBulkPreview(listings);
+  };
+  reader.readAsText(file);
+}
+
+function mapWooToSPF(r) {
+  return {
+    name: r.post_title || r.name || '',
+    category: mapWooCategory(r.tax_product_cat || r.category || ''),
+    make: extractMake(r.post_title || r.name || '') || 'Other',
+    model: r['attribute_pa_model'] || r.model || 'Various',
+    year_start: parseInt(r['attribute_pa_year'] || r.year_start) || null,
+    year_end: parseInt(r['attribute_pa_year_to'] || r.year_end) || null,
+    condition: mapCondition(r['attribute_pa_condition'] || r.condition || 'Used'),
+    price: parseFloat(r.regular_price || r._regular_price || r.price || 0),
+    sku: r.sku || '',
+    description: r.post_content || r.description || '',
+    location: r['attribute_pa_location'] || r.location || 'Johannesburg',
+    shipping_options: ['Collection', 'Courier'],
+    images: r.images ? r.images.split('|').map(u=>u.trim()).filter(Boolean) : [],
+    status: 'active',
+    _preview_img: (r.images||'').split('|')[0]?.trim() || ''
+  };
+}
+
+function mapSPFCsv(r) {
+  const ship = r.shipping || 'Collection';
+  return {
+    name: r.name || '',
+    category: r.category || 'Engine & Components',
+    make: r.make || 'Other',
+    model: r.model || 'Various',
+    year_start: parseInt(r.year_start) || null,
+    year_end: parseInt(r.year_end) || null,
+    condition: mapCondition(r.condition || 'Used'),
+    price: parseFloat(r.price || 0),
+    sku: r.sku || '',
+    description: r.description || '',
+    location: r.location || 'Johannesburg',
+    shipping_options: ship === 'Both' ? ['Collection','Courier'] : [ship],
+    images: r.image_url ? [r.image_url] : [],
+    status: 'active',
+    _preview_img: r.image_url || ''
+  };
+}
+
+function mapWooCategory(cat) {
+  const map = {
+    'engine': 'Engine & Components', 'body': 'Body Parts',
+    'lighting': 'Headlights & Lighting', 'electrical': 'Electrical Systems',
+    'suspension': 'Suspension & Steering', 'transmission': 'Transmission',
+    'interior': 'Interior', 'wheels': 'Wheels & Tyres', 'salvage': 'Stripping for Parts'
+  };
+  const lower = cat.toLowerCase();
+  for (const [k, v] of Object.entries(map)) { if (lower.includes(k)) return v; }
+  return 'Engine & Components';
+}
+
+function mapCondition(c) {
+  const l = c.toLowerCase();
+  if (l.includes('new')) return 'New';
+  if (l.includes('salvage') || l.includes('damage')) return 'Damaged/Salvage';
+  return 'Used';
+}
+
+function extractMake(title) {
+  const makes = ['BMW','Mercedes','Toyota','Volkswagen','VW','Ford','Nissan','Hyundai','Kia','Audi','Honda','Mazda','Suzuki','Isuzu','Mitsubishi','Renault','Land Rover'];
+  for (const m of makes) { if (title.toUpperCase().includes(m.toUpperCase())) return m === 'VW' ? 'Volkswagen' : m; }
+  return null;
+}
+
+function parseCSV(text) {
+  const rows = []; let row = []; let cell = ''; let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (c === '"') { inQuotes = !inQuotes; }
+    else if (c === ',' && !inQuotes) { row.push(cell); cell = ''; }
+    else if ((c === '\n' || c === '\r') && !inQuotes) {
+      if (c === '\r' && text[i+1] === '\n') i++;
+      row.push(cell); rows.push(row); row = []; cell = '';
+    } else { cell += c; }
+  }
+  if (cell || row.length) { row.push(cell); rows.push(row); }
+  return rows;
+}
+
+function showBulkPreview(listings) {
+  document.getElementById('bulk-preview-card').style.display = 'block';
+  document.getElementById('bulk-preview-title').textContent = 'Preview — ' + listings.length + ' listing' + (listings.length !== 1 ? 's' : '') + ' ready to import';
+  document.getElementById('bulk-preview-tbody').innerHTML = listings.map((l, i) => `
+    <tr>
+      <td style="font-size:11px;color:var(--text3)">${i+1}</td>
+      <td class="cell-bold">${l.name}</td>
+      <td style="font-size:12px">${l.make} ${l.model}${l.year_start?' · '+l.year_start:''}</td>
+      <td style="font-size:12px">${l.category}</td>
+      <td><span class="pill ${l.condition==='New'?'pill-active':l.condition.includes('Salvage')?'pill-suspended':'pill-pending'}">${l.condition}</span></td>
+      <td class="cell-mono" style="color:var(--success)">R ${(l.price||0).toLocaleString()}</td>
+      <td>${l._preview_img ? '<img src="'+l._preview_img+'" style="width:40px;height:30px;object-fit:cover;border-radius:4px" onerror="this.style.display='none'">' : '—'}</td>
+      <td><span class="pill pill-pending" id="bulk-status-${i}">Ready</span></td>
+    </tr>`).join('');
+}
+
+function cancelBulkUpload() {
+  bulkParsedListings = [];
+  document.getElementById('bulk-preview-card').style.display = 'none';
+  document.getElementById('bulk-file-inp').value = '';
+}
+
+async function importBulkListings() {
+  const sellerId = document.getElementById('bulk-seller-id').value;
+  if (!sellerId) { showToast('Please select a seller first.'); return; }
+  if (!bulkParsedListings.length) { showToast('No listings to import.'); return; }
+
+  document.getElementById('bulk-preview-card').style.display = 'none';
+  document.getElementById('bulk-progress-card').style.display = 'block';
+
+  let imported = 0; let failed = 0;
+  const total = bulkParsedListings.length;
+
+  for (let i = 0; i < bulkParsedListings.length; i++) {
+    const listing = { ...bulkParsedListings[i], seller_id: sellerId };
+    delete listing._preview_img;
+    if (!listing.sku) listing.sku = 'SPF-' + Math.random().toString(36).substring(2,8).toUpperCase();
+
+    const { error } = await sb.from('listings').insert(listing);
+    if (error) { failed++; console.error('Import error:', error); }
+    else { imported++; }
+
+    const pct = Math.round(((i+1)/total)*100);
+    document.getElementById('bulk-progress-bar').style.width = pct + '%';
+    document.getElementById('bulk-progress-text').textContent = (i+1) + ' of ' + total + ' listings imported';
+  }
+
+  document.getElementById('bulk-progress-title').textContent = '✅ Import Complete!';
+  document.getElementById('bulk-progress-text').textContent = imported + ' imported successfully' + (failed ? ', ' + failed + ' failed' : '');
+  document.getElementById('bulk-progress-bar').style.background = failed ? 'var(--warn)' : 'var(--success)';
+
+  logAudit('Bulk Import', imported + ' listings imported for seller ' + sellerId);
+  await loadAllData();
+  showToast(imported + ' listings imported successfully ✓', 'success');
+
+  setTimeout(() => {
+    document.getElementById('bulk-progress-card').style.display = 'none';
+    bulkParsedListings = [];
+    document.getElementById('bulk-file-inp').value = '';
+  }, 4000);
+}
+
+function downloadSPFTemplate() {
+  const headers = 'name,category,make,model,year_start,year_end,condition,price,sku,description,location,shipping,image_url';
+  const example = 'BMW M3 Alternator,Engine & Components,BMW,3 Series,2014,2019,Used,4500,BMW-ALT-101,Genuine BMW alternator in excellent condition,Johannesburg,Both,https://example.com/image.jpg';
+  const csv = headers + '\n' + example;
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'SPF-Listings-Template.csv'; a.click();
+}
+
+function downloadWooTemplate() {
+  showToast('Export from WooCommerce: Products → Export → All columns. Then upload here and select WooCommerce format.');
+}
+
 
 // ══════════════════════════════════════════════════════════════
 //  INIT
