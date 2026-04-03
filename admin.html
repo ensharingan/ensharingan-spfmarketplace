@@ -893,7 +893,7 @@ function renderSubscriptions() {
       <td><span class="pill ${subPill}">${s.sub_status||'trial'}</span></td>
       <td style="font-size:11px;color:var(--text3)">${s.last_payment ? new Date(s.last_payment).toLocaleDateString('en-ZA') : 'Never'}</td>
       <td style="font-size:11px;color:var(--text3)">${due ? due.toLocaleDateString('en-ZA') : '—'}</td>
-      <td><span style="color:${overdue>0?'var(--red)':'var(--success)'};font-weight:600">${overdue > 0 ? overdue + ' days' : '—'}</span></td>
+      <td><span style="font-weight:600" id="overdue-cell">${overdue > 0 ? '<span style="color:var(--red)">' + overdue + ' days</span>' : '—'}</span></td>
       <td><div class="act-row">
         <button class="btn btn-approve" onclick="markPaid('${s.id}','${s.business_name}')">Mark Paid</button>
         ${overdue > GRACE_DAYS ? `<button class="btn btn-suspend" onclick="suspendSeller('${s.id}','${s.business_name}')">Suspend</button>` : ''}
