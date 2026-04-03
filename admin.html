@@ -896,7 +896,7 @@ function renderSubscriptions() {
       <td><span style="font-weight:600" id="overdue-cell">${overdue > 0 ? '<span style="color:var(--red)">' + overdue + ' days</span>' : '—'}</span></td>
       <td><div class="act-row">
         <button class="btn btn-approve" onclick="markPaid('${s.id}','${s.business_name}')">Mark Paid</button>
-        ${overdue > GRACE_DAYS ? `<button class="btn btn-suspend" onclick="suspendSeller('${s.id}','${s.business_name}')">Suspend</button>` : ''}
+        ${overdue > GRACE_DAYS ? '<button class=\"btn btn-suspend\" onclick=\"suspendSeller(\'' + s.id + '\',\'' + s.business_name + '\')\">Suspend</button>' : ''}
         <button class="btn btn-view" onclick="sendPaymentReminder('${s.id}','${s.business_name}','${s.email}')">📧 Remind</button>
       </div></td>
     </tr>`;
