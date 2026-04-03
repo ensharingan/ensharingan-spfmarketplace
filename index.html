@@ -358,6 +358,23 @@ footer{background:var(--blue3);padding:2rem 1.5rem 1.25rem;margin-top:3rem}
 .footer-badges{display:flex;gap:8px}
 .f-badge{font-family:var(--font-h);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;border-radius:20px;border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.5)}
 
+
+/* ══ USER MENU ══ */
+.user-menu-wrap{position:relative}
+.user-btn{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);border-radius:var(--r);padding:6px 14px;font-family:var(--font-h);font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#fff;cursor:pointer;display:flex;align-items:center;gap:7px;transition:all .15s}
+.user-btn:hover{background:rgba(255,255,255,.22)}
+.user-avatar{width:26px;height:26px;border-radius:50%;background:var(--red);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0}
+.user-dropdown{display:none;position:absolute;top:calc(100% + 8px);right:0;background:#fff;border:1.5px solid var(--border);border-radius:var(--rl);box-shadow:var(--shadow-lg);min-width:200px;z-index:200;overflow:hidden}
+.user-dropdown.open{display:block}
+.user-dropdown-header{padding:12px 14px;border-bottom:1px solid var(--border);background:var(--bg2)}
+.user-dropdown-name{font-family:var(--font-h);font-size:14px;font-weight:800;color:var(--text);letter-spacing:.02em}
+.user-dropdown-email{font-size:11px;color:var(--text3);margin-top:2px}
+.user-dropdown-item{display:flex;align-items:center;gap:10px;padding:10px 14px;font-size:13px;color:var(--text2);cursor:pointer;transition:background .12s;border:none;background:transparent;width:100%;text-align:left}
+.user-dropdown-item:hover{background:var(--bg2);color:var(--text)}
+.user-dropdown-item.danger{color:var(--red)}
+.user-dropdown-item.danger:hover{background:var(--red-dim)}
+.user-dropdown-divider{height:1px;background:var(--border)}
+
 /* ══ RESPONSIVE ══ */
 @media(max-width:1000px){.browse-layout{grid-template-columns:1fr}.sidebar{display:none}.stat-row{grid-template-columns:1fr 1fr}.chart-grid{grid-template-columns:1fr}.dash-layout{grid-template-columns:1fr}.dash-sidebar{position:static}}
 @media(max-width:700px){.hero{padding:2.25rem 1rem 2rem}.main{padding:1rem}.search-row{grid-template-columns:1fr}.search-select{display:none}.modal-grid{grid-template-columns:1fr}.form-2{grid-template-columns:1fr}.add-grid{grid-template-columns:1fr}.prof-grid{grid-template-columns:1fr}.contact-layout{grid-template-columns:1fr}.footer-top{grid-template-columns:1fr}}
@@ -399,7 +416,25 @@ footer{background:var(--blue3);padding:2rem 1.5rem 1.25rem;margin-top:3rem}
   <div class="nav-right">
     <span class="nav-location">📍 Centurion, ZA</span>
     <button class="cart-btn" onclick="gotoView('cart',null)">🛒 Cart <span class="cart-badge" id="cart-badge">0</span></button>
+    <!-- Guest: Sign In button -->
     <button class="sign-btn" id="auth-btn" onclick="openAuth()">Sign In</button>
+    <!-- Logged in: User menu -->
+    <div class="user-menu-wrap" id="user-menu-wrap" style="display:none">
+      <button class="user-btn" onclick="toggleUserMenu()" id="user-menu-btn">
+        <div class="user-avatar" id="nav-avatar">U</div>
+        <span id="nav-username">User</span> ▾
+      </button>
+      <div class="user-dropdown" id="user-dropdown">
+        <div class="user-dropdown-header">
+          <div class="user-dropdown-name" id="dd-name">User</div>
+          <div class="user-dropdown-email" id="dd-email"></div>
+        </div>
+        <button class="user-dropdown-item" onclick="openDash(null);closeUserMenu()">📊 My Dashboard</button>
+        <button class="user-dropdown-item" onclick="gotoView('cart',null);closeUserMenu()">🛒 Cart</button>
+        <div class="user-dropdown-divider"></div>
+        <button class="user-dropdown-item danger" onclick="doLogout();closeUserMenu()">🚪 Sign Out</button>
+      </div>
+    </div>
   </div>
   <!-- Hamburger for mobile -->
   <div class="hamburger" id="hamburger" onclick="toggleMobileMenu()">
@@ -417,6 +452,7 @@ footer{background:var(--blue3);padding:2rem 1.5rem 1.25rem;margin-top:3rem}
   <button class="mobile-nav-item" onclick="gotoView('cart',null);closeMobileMenu()">🛒 Cart <span id="mobile-cart-badge" style="background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 7px;border-radius:20px;margin-left:6px">0</span></button>
   <div class="mobile-nav-divider"></div>
   <button class="mobile-nav-auth" id="mobile-auth-btn" onclick="openAuth();closeMobileMenu()">Sign In →</button>
+  <button class="mobile-nav-auth" id="mobile-signout-btn" style="display:none;background:#555" onclick="doLogout();closeMobileMenu()">🚪 Sign Out</button>
 </div>
 
 <!-- HERO -->
@@ -947,6 +983,7 @@ footer{background:var(--blue3);padding:2rem 1.5rem 1.25rem;margin-top:3rem}
 // ══════════════════════════════════════════════════════════════
 const SUPABASE_URL    = 'https://ycoclceordqbeumeujzf.supabase.co';
 const SUPABASE_ANON   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inljb2NsY2VvcmRxYmV1bWV1anpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3OTYyODQsImV4cCI6MjA5MDM3MjI4NH0.C2WvWR1MVMWJPJ6fHgcuEZLNC3HeElYsFjWSTFhrmzo';  // your full anon key
+const SUPER_ADMIN_EMAILS = ['chevan@sparepartsfinder.co.za'];
 const CLOUDINARY_CLOUD  = 'dnr82g2yo';   // leave this for now
 const CLOUDINARY_PRESET = 'spf_unsigned';       // leave this for now
 
@@ -1018,8 +1055,13 @@ async function doRegister() {
 
 async function onAuth(supaUser, role) {
   user = { id: supaUser.id, email: supaUser.email, role };
-  document.getElementById('auth-btn').textContent = supaUser.email.split('@')[0]; const mab = document.getElementById('mobile-auth-btn'); if(mab) mab.textContent = supaUser.email.split('@')[0];
+  showLoggedInNav(supaUser);
   document.getElementById('modal-auth').classList.remove('open');
+  // If admin email — don't redirect to seller dashboard
+  if (SUPER_ADMIN_EMAILS.includes(supaUser.email)) {
+    showToast('Welcome back, ' + supaUser.email.split('@')[0] + '! Go to /admin for the admin panel.');
+    return;
+  }
   if (role === 'seller' || role === 'admin') {
     await loadSellerData();
     document.getElementById('nav-tab-dash').style.display = 'flex'; const mdb = document.getElementById('mobile-dash-btn'); if(mdb) mdb.style.display = 'block';
@@ -1037,7 +1079,7 @@ async function checkSession() {
 function doLogout() {
   sb.auth.signOut();
   user = null; sellerDbId = null; sellerProfile = {}; myListings = []; sellerEnquiries = []; sellerOrders = [];
-  document.getElementById('auth-btn').textContent = 'Sign In';
+  showLoggedOutNav();
   document.getElementById('nav-tab-dash').style.display = 'none';
   gotoView('browse', document.querySelectorAll('.nav-tab')[0]);
   showToast('Signed out successfully.');
@@ -1579,52 +1621,6 @@ function updateListModel(){
   sel.innerHTML='<option value="">All Models</option>';
   if(make&&SA_VEHICLE_DATA[make])SA_VEHICLE_DATA[make].forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;sel.appendChild(o);});
 }
-
-
-// ══ PUBLIC LIST A PART UPLOAD ══
-function wirePublicUploadArea() {
-  const area = document.getElementById('public-upload-area');
-  if (!area) return;
-  const inp = document.createElement('input');
-  inp.type = 'file'; inp.accept = 'image/*'; inp.multiple = true; inp.style.display = 'none';
-  area.appendChild(inp);
-  area.addEventListener('click', () => inp.click());
-  area.addEventListener('dragover', e => { e.preventDefault(); area.style.borderColor = 'var(--blue)'; });
-  area.addEventListener('dragleave', () => area.style.borderColor = '');
-  area.addEventListener('drop', e => { e.preventDefault(); area.style.borderColor = ''; handlePublicImageFiles(e.dataTransfer.files); });
-  inp.addEventListener('change', () => handlePublicImageFiles(inp.files));
-}
-
-let publicUploadedUrls = [];
-
-async function handlePublicImageFiles(files) {
-  if (!files || !files.length) return;
-  const fileArr = Array.from(files);
-  showToast('Uploading ' + fileArr.length + ' photo(s)…');
-  for (const file of fileArr) {
-    const fd = new FormData();
-    fd.append('file', file);
-    fd.append('upload_preset', CLOUDINARY_PRESET);
-    try {
-      const res = await fetch('https://api.cloudinary.com/v1_1/' + CLOUDINARY_CLOUD + '/image/upload', { method: 'POST', body: fd });
-      const data = await res.json();
-      if (data.secure_url) {
-        publicUploadedUrls.push(data.secure_url);
-        const wrap = document.getElementById('public-upload-thumbs');
-        if (wrap) {
-          const img = document.createElement('img');
-          img.src = data.secure_url;
-          img.style.cssText = 'width:70px;height:52px;object-fit:cover;border-radius:6px;border:2px solid var(--blue)';
-          wrap.appendChild(img);
-        }
-        showToast(publicUploadedUrls.length + ' photo(s) ready ✓');
-      } else if (data.error) {
-        showToast('Upload error: ' + data.error.message);
-      }
-    } catch(e) { showToast('Upload failed: ' + e.message); }
-  }
-}
-
 
 // ══ INIT ══
 populateDropdowns();
