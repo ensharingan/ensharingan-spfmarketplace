@@ -1401,7 +1401,7 @@ function showBulkPreview(listings) {
       <td style="font-size:12px">${l.category}</td>
       <td><span class="pill ${l.condition==='New'?'pill-active':l.condition.includes('Salvage')?'pill-suspended':'pill-pending'}">${l.condition}</span></td>
       <td class="cell-mono" style="color:var(--success)">R ${(l.price||0).toLocaleString()}</td>
-      <td>${l._preview_img ? '<img src="'+l._preview_img+'" style="width:40px;height:30px;object-fit:cover;border-radius:4px" onerror="this.style.display='none'">' : '—'}</td>
+      <td>${l._preview_img ? '<img src="'+l._preview_img+'" style="width:40px;height:30px;object-fit:cover;border-radius:4px">' : '—'}</td>
       <td><span class="pill pill-pending" id="bulk-status-${i}">Ready</span></td>
     </tr>`).join('');
 }
