@@ -1487,7 +1487,7 @@ function openProduct(id) {
   document.getElementById('m-name').textContent = p.name;
   document.getElementById('m-price').textContent = 'R '+p.price.toLocaleString();
   document.getElementById('m-price-note').textContent = p.condition==='New'?'New part · Fixed price':p.condition==='Damaged/Salvage'?'Salvage vehicle · Price negotiable':'Used part · Price negotiable';
-  document.getElementById('m-desc').textContent = p.description||'';
+  document.getElementById('m-desc').innerHTML = (p.description||'').replace(/\n/g,'<br>').replace(/\\n/g,'<br>');
   document.getElementById('m-specs').innerHTML = `<div class="spec-item"><div class="spec-lbl">SKU</div><div class="spec-val">${p.sku||'—'}</div></div><div class="spec-item"><div class="spec-lbl">Quantity</div><div class="spec-val">${p.quantity||1}</div></div><div class="spec-item"><div class="spec-lbl">Fits</div><div class="spec-val">${p.year_start||''}–${p.year_end||''}</div></div><div class="spec-item"><div class="spec-lbl">Location</div><div class="spec-val">${p.location||'—'}</div></div>`;
   document.getElementById('m-shipping').innerHTML = (p.shipping_options||[]).map(sh=>`<span class="ship-tag">${sh==='Courier'?'📦':'🏪'} ${sh}</span>`).join('');
   const logo = document.getElementById('m-seller-logo');
