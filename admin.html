@@ -1204,87 +1204,83 @@ function closeRegisterModal() {
 }
 
 async function submitRegisterSeller() {
-  const biz     = document.getElementById('rs-biz').value.trim();
-  const contact = document.getElementById('rs-contact').value.trim();
-  const email   = document.getElementById('rs-email').value.trim();
-  const phone   = document.getElementById('rs-phone').value.trim();
-  const pass    = document.getElementById('rs-pass').value;
-  const province= document.getElementById('rs-province').value;
-  const address = document.getElementById('rs-address').value.trim();
-  const subStatus = document.getElementById('rs-sub').value;
+  const biz      = document.getElementById('rs-biz').value.trim();
+  const contact  = document.getElementById('rs-contact').value.trim();
+  const email    = document.getElementById('rs-email').value.trim();
+  const phone    = document.getElementById('rs-phone').value.trim();
+  const pass     = document.getElementById('rs-pass').value;
+  const province = document.getElementById('rs-province').value;
+  const address  = document.getElementById('rs-address').value.trim();
+  const subStatus= document.getElementById('rs-sub').value;
 
-  if (!biz || !contact || !email || !phone || !pass) {
-    showToast('Please fill in all required fields.'); return;
-  }
+  if (!biz || !contact || !email || !phone || !pass) { showToast('Please fill in all required fields.'); return; }
   if (pass.length < 8) { showToast('Password must be at least 8 characters.'); return; }
 
   const btn = document.getElementById('rs-submit-btn');
   btn.disabled = true; btn.textContent = 'Creating account…';
 
+  const subPaidUntil = (subStatus === 'trial' || subStatus === 'paid')
+    ? new Date(Date.now() + 30*86400000).toISOString() : null;
+
   try {
-    // Try to create auth user — if already exists, find their ID
-    let userId = null;
+    // Step 1: Check if seller record already exists by email
+    const { data: existingSeller } = await sb.from('sellers').select('id, user_id').eq('email', email).single();
+
+    if (existingSeller) {
+      // Update existing seller record
+      await sb.from('sellers').update({
+        business_name: biz, contact_person: contact, phone,
+        status: 'approved', whatsapp_enabled: true,
+        sub_status: subStatus, sub_paid_until: subPaidUntil,
+        address: { city: province, street: address }
+      }).eq('id', existingSeller.id);
+      logAudit('Seller Updated', biz + ' (' + email + ')');
+      closeRegisterModal();
+      await loadAllData();
+      showToast('✅ ' + biz + ' updated successfully!', 'success');
+      btn.disabled=false; btn.textContent='✅ Create Seller Account';
+      return;
+    }
+
+    // Step 2: Create new auth user
     const { data: authData, error: authError } = await sb.auth.signUp({
       email, password: pass,
       options: { data: { full_name: contact, role: 'seller' } }
     });
 
-    if (authError && authError.message.includes('already registered')) {
-      // User exists — find their ID from sellers table or auth
-      const { data: existing } = await sb.from('sellers').select('user_id').eq('email', email).single();
-      if (existing?.user_id) {
-        // Seller record already exists — just update it
-        const { error: updateError } = await sb.from('sellers').update({
-          business_name: biz, contact_person: contact, phone,
-          status: 'approved', whatsapp_enabled: true,
-          sub_status: subStatus, sub_paid_until: subPaidUntil,
-          address: { city: province, street: address }
-        }).eq('email', email);
-        logAudit('Seller Updated', biz + ' (' + email + ')');
-        closeRegisterModal();
-        await loadAllData();
-        showToast('✅ ' + biz + ' seller record updated!', 'success');
-        btn.disabled=false; btn.textContent='✅ Create Seller Account';
-        return;
+    let userId = authData?.user?.id;
+
+    if (authError || !userId) {
+      // User might already exist in auth but not in sellers table
+      // Try signing in to get their ID
+      const { data: signInData, error: signInError } = await sb.auth.signInWithPassword({ email, password: pass });
+      if (signInData?.user?.id) {
+        userId = signInData.user.id;
+        // Sign back in as admin
+        await sb.auth.signInWithPassword({ email: adminUser.email, password: '' });
+      } else {
+        showToast('Could not create/find user. Error: ' + (authError?.message || 'Unknown'));
+        btn.disabled=false; btn.textContent='✅ Create Seller Account'; return;
       }
-      // Auth user exists but no seller record — get user ID via admin lookup
-      showToast('User exists — creating seller record. Check Supabase for user ID.');
-      btn.disabled=false; btn.textContent='✅ Create Seller Account';
-      return;
-    } else if (authError) {
-      showToast('Auth error: ' + authError.message); btn.disabled=false; btn.textContent='✅ Create Seller Account'; return;
     }
 
-    userId = authData.user?.id;
-    if (!userId) { showToast('Could not create user.'); btn.disabled=false; btn.textContent='✅ Create Seller Account'; return; }
-
-    // Create seller record
-    const subPaidUntil = subStatus === 'trial'
-      ? new Date(Date.now() + 30*86400000).toISOString()
-      : subStatus === 'paid'
-      ? new Date(Date.now() + 30*86400000).toISOString()
-      : null;
-
+    // Step 3: Create seller record
     const { error: sellerError } = await sb.from('sellers').insert({
-      user_id: userId,
-      business_name: biz,
-      contact_person: contact,
-      email, phone,
-      status: 'approved',
-      whatsapp_enabled: true,
-      sub_status: subStatus,
-      sub_paid_until: subPaidUntil,
+      user_id: userId, business_name: biz, contact_person: contact,
+      email, phone, status: 'approved', whatsapp_enabled: true,
+      sub_status: subStatus, sub_paid_until: subPaidUntil,
       address: { city: province, street: address }
     });
 
-    if (sellerError) { showToast('Seller record error: ' + sellerError.message); btn.disabled=false; btn.textContent='✅ Create Seller Account'; return; }
+    if (sellerError) {
+      showToast('Seller record error: ' + sellerError.message);
+      btn.disabled=false; btn.textContent='✅ Create Seller Account'; return;
+    }
 
     logAudit('Seller Registered', biz + ' (' + email + ')');
     closeRegisterModal();
     await loadAllData();
-    showToast('✅ ' + biz + ' registered successfully! Login: ' + email, 'success');
-
-    // Clear form
+    showToast('✅ ' + biz + ' registered! They can now sign in with ' + email, 'success');
     ['rs-biz','rs-contact','rs-email','rs-phone','rs-address'].forEach(id => {
       const el = document.getElementById(id); if(el) el.value = '';
     });
@@ -1314,22 +1310,36 @@ function populateBulkSellerDropdown() {
 
 function handleBulkFile(file) {
   if (!file) return;
+  if (!file.name.endsWith('.csv')) { showToast('Please upload a .csv file.'); return; }
   const format = document.getElementById('bulk-csv-format').value;
+  showToast('Reading file: ' + file.name + '…');
   const reader = new FileReader();
+  reader.onerror = () => showToast('Failed to read file.');
   reader.onload = e => {
-    const text = e.target.result;
-    const rows = parseCSV(text);
-    if (rows.length < 2) { showToast('CSV appears empty or invalid.'); return; }
-    const headers = rows[0].map(h => h.toLowerCase().trim().replace(/\s+/g,'_'));
-    const isWoo = headers.includes('post_title') || headers.includes('regular_price') || headers.includes('_regular_price');
-    const listings = rows.slice(1).filter(r => r.some(c => c.trim())).map(row => {
-      const obj = {};
-      headers.forEach((h, i) => obj[h] = (row[i] || '').trim());
-      if (isWoo || format === 'woocommerce') return mapWooToSPF(obj);
-      return mapSPFCsv(obj);
-    }).filter(l => l.name);
-    bulkParsedListings = listings;
-    showBulkPreview(listings);
+    try {
+      const text = e.target.result;
+      if (!text || text.trim().length === 0) { showToast('CSV file is empty.'); return; }
+      const rows = parseCSV(text);
+      if (rows.length < 2) { showToast('CSV needs at least a header row and one data row.'); return; }
+      const headers = rows[0].map(h => (h || '').toLowerCase().trim().replace(/[^a-z0-9_]/g,'_'));
+      const isWoo = headers.some(h => ['post_title','regular_price','_regular_price','post_content'].includes(h));
+      const useWoo = isWoo || format === 'woocommerce';
+      showToast('Detected format: ' + (useWoo ? 'WooCommerce' : 'SPF Custom') + ' — ' + (rows.length-1) + ' rows found');
+      const listings = rows.slice(1)
+        .filter(r => r && r.some(c => (c||'').trim()))
+        .map(row => {
+          const obj = {};
+          headers.forEach((h, i) => { obj[h] = (row[i] || '').trim(); });
+          return useWoo ? mapWooToSPF(obj) : mapSPFCsv(obj);
+        })
+        .filter(l => l && l.name && l.name.length > 0);
+      if (listings.length === 0) { showToast('No valid listings found. Check your CSV columns match the template.'); return; }
+      bulkParsedListings = listings;
+      showBulkPreview(listings);
+    } catch(err) {
+      showToast('Error parsing CSV: ' + err.message);
+      console.error('CSV parse error:', err);
+    }
   };
   reader.readAsText(file);
 }
