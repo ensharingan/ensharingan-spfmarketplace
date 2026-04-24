@@ -975,7 +975,7 @@ footer{background:var(--blue3);padding:2rem 1.5rem 1.25rem;margin-top:3rem}
 
 <div class="toast" id="toast"></div>
 
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+<script>
 // ══════════════════════════════════════════════════════════════
 //  CONFIG — Replace with your real Supabase + Cloudinary values
 //  Supabase: Project Settings → API
@@ -1057,20 +1057,11 @@ function showLoggedInNav(supaUser) {
   const authBtn = document.getElementById('auth-btn');
   const userWrap = document.getElementById('user-menu-wrap');
   const navUsername = document.getElementById('nav-username');
-  const navAvatar = document.getElementById('nav-avatar');
-  const ddName = document.getElementById('dd-name');
-  const ddEmail = document.getElementById('dd-email');
   if (authBtn) authBtn.style.display = 'none';
   if (userWrap) userWrap.style.display = 'block';
-  const displayName = supaUser.user_metadata?.full_name || supaUser.email.split('@')[0];
-  if (navUsername) navUsername.textContent = displayName.split(' ')[0];
-  if (navAvatar) navAvatar.textContent = displayName.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
-  if (ddName) ddName.textContent = displayName;
-  if (ddEmail) ddEmail.textContent = supaUser.email;
+  if (navUsername) navUsername.textContent = (supaUser.user_metadata?.name || supaUser.email || 'User').split(/[@\s]/)[0];
   const mobileAuthBtn = document.getElementById('mobile-auth-btn');
-  const mobileSignoutBtn = document.getElementById('mobile-signout-btn');
-  if (mobileAuthBtn) mobileAuthBtn.style.display = 'none';
-  if (mobileSignoutBtn) mobileSignoutBtn.style.display = 'block';
+  if (mobileAuthBtn) { mobileAuthBtn.textContent = 'Sign Out →'; mobileAuthBtn.onclick = () => { doLogout(); closeMobileMenu(); }; }
 }
 
 function showLoggedOutNav() {
@@ -1079,9 +1070,7 @@ function showLoggedOutNav() {
   if (authBtn) authBtn.style.display = 'block';
   if (userWrap) userWrap.style.display = 'none';
   const mobileAuthBtn = document.getElementById('mobile-auth-btn');
-  const mobileSignoutBtn = document.getElementById('mobile-signout-btn');
-  if (mobileAuthBtn) mobileAuthBtn.style.display = 'block';
-  if (mobileSignoutBtn) mobileSignoutBtn.style.display = 'none';
+  if (mobileAuthBtn) { mobileAuthBtn.textContent = 'Sign In →'; mobileAuthBtn.onclick = () => { openAuth(); closeMobileMenu(); }; }
 }
 
 async function onAuth(supaUser, role) {
@@ -1272,38 +1261,6 @@ function wireUploadArea() {
   inp.addEventListener('change', () => handleImageFiles(inp.files));
 }
 
-function wirePublicUploadArea() {
-  const area = document.getElementById('public-upload-area');
-  if (!area) return;
-  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*'; inp.multiple = true; inp.style.display = 'none'; area.appendChild(inp);
-  area.addEventListener('click', () => inp.click());
-  area.addEventListener('dragover', e => { e.preventDefault(); area.style.borderColor = 'var(--blue)'; });
-  area.addEventListener('dragleave', () => area.style.borderColor = '');
-  area.addEventListener('drop', e => { e.preventDefault(); area.style.borderColor = ''; publicUploadFiles(e.dataTransfer.files); });
-  inp.addEventListener('change', () => publicUploadFiles(inp.files));
-}
-
-async function publicUploadFiles(files) {
-  if (!files || !files.length) return;
-  showToast('Uploading ' + files.length + ' photo(s)…');
-  const wrap = document.getElementById('public-upload-thumbs');
-  for (const file of Array.from(files)) {
-    const fd = new FormData();
-    fd.append('file', file); fd.append('upload_preset', CLOUDINARY_PRESET); fd.append('folder', 'spf/listings');
-    try {
-      const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`, { method: 'POST', body: fd });
-      const data = await res.json();
-      if (data.secure_url && wrap) {
-        const img = document.createElement('img');
-        img.src = data.secure_url;
-        img.style.cssText = 'width:70px;height:52px;object-fit:cover;border-radius:6px;border:2px solid var(--blue)';
-        wrap.appendChild(img);
-      }
-    } catch(e) { showToast('Upload failed: ' + e.message); }
-  }
-  showToast('Photos uploaded ✓');
-}
-
 // ══════════════════════════════════════════════════════════════
 //  SELLER DASHBOARD
 // ══════════════════════════════════════════════════════════════
@@ -1431,7 +1388,7 @@ async function markReplied(id) {
 function renderMyListings(parts) {
   const el = document.getElementById('my-listings-list');
   if (!parts.length) { el.innerHTML = '<div style="text-align:center;padding:2.5rem;background:#fff;border:1.5px dashed var(--border2);border-radius:var(--rl)"><div style="font-size:2rem;opacity:.25;margin-bottom:.5rem">📦</div><div style="font-family:var(--font-h);font-size:16px;font-weight:800;text-transform:uppercase;color:var(--text3)">No listings yet</div><div style="font-size:12px;color:var(--text3);margin-top:.35rem">Click <strong>Add New Part</strong> to publish your first listing.</div></div>'; return; }
-  el.innerHTML = parts.map(p => `<div class="listing-row">${p.images?.length?`<img class="listing-thumb" src="${p.images[0]}" alt="">`:'<div class="listing-thumb-ph">⚙️</div>'}<div><div class="listing-name">${p.name}</div><div class="listing-meta">${p.make} ${p.model} · ${p.year_start||''}–${p.year_end||''} · <span class="pill ${condClass(p.condition)==='cn'?'pill-active':condClass(p.condition)==='cs'?'pill-new':'pill-pending'}">${p.condition}</span> · <strong style="color:var(--blue)">R ${p.price.toLocaleString()}</strong></div><div class="listing-meta" style="margin-top:2px">SKU: ${p.sku||'—'} · ${p.location||'—'} · ${(p.shipping_options||[]).join(', ')}</div></div><div class="listing-acts"><button class="act-btn edit" onclick="editPart('${p.id}')">Edit</button><button class="act-btn del" onclick="deletePart('${p.id}')">Remove</button></div></div>`).join('');
+  el.innerHTML = parts.map(p => `<div class="listing-row">${p.images?.length?`<img class="listing-thumb" src="${proxyImg(p.images[0])}" alt="" loading="lazy" onerror="this.parentNode.innerHTML='<div class=\'listing-thumb-ph\'>⚙️</div>'">`:'<div class="listing-thumb-ph">⚙️</div>'}<div><div class="listing-name">${p.name}</div><div class="listing-meta">${p.make} ${p.model} · ${p.year_start||''}–${p.year_end||''} · <span class="pill ${condClass(p.condition)==='cn'?'pill-active':condClass(p.condition)==='cs'?'pill-new':'pill-pending'}">${p.condition}</span> · <strong style="color:var(--blue)">R ${p.price.toLocaleString()}</strong></div><div class="listing-meta" style="margin-top:2px">SKU: ${p.sku||'—'} · ${p.location||'—'} · ${(p.shipping_options||[]).join(', ')}</div></div><div class="listing-acts"><button class="act-btn edit" onclick="editPart('${p.id}')">Edit</button><button class="act-btn del" onclick="deletePart('${p.id}')">Remove</button></div></div>`).join('');
 }
 
 function renderOrders(ords) {
@@ -1519,7 +1476,7 @@ function addToCart(p) {
 function renderCart() {
   const el = document.getElementById('cart-items-list');
   if (!cart.length) { el.innerHTML='<div style="text-align:center;padding:2rem;color:var(--text3)">Your cart is empty.</div>'; document.getElementById('cart-summary').innerHTML=''; return; }
-  el.innerHTML = cart.map((item,i) => `<div class="cart-item">${item.product.images?.length?`<img class="cart-thumb" src="${item.product.images[0]}" alt="">`:'<div class="cart-thumb-ph">⚙️</div>'}<div style="flex:1"><div class="cart-name">${item.product.name}</div><div class="cart-meta">${item.product.make} · ${item.product.model} · ${item.product.condition} · Qty: ${item.quantity}</div></div><div class="cart-price">R ${(item.product.price*item.quantity).toLocaleString()}</div><button class="cart-rm" onclick="removeFromCart(${i})">✕</button></div>`).join('');
+  el.innerHTML = cart.map((item,i) => `<div class="cart-item">${item.product.images?.length?`<img class="cart-thumb" src="${proxyImg(item.product.images[0])}" alt="">`:'<div class="cart-thumb-ph">⚙️</div>'}<div style="flex:1"><div class="cart-name">${item.product.name}</div><div class="cart-meta">${item.product.make} · ${item.product.model} · ${item.product.condition} · Qty: ${item.quantity}</div></div><div class="cart-price">R ${(item.product.price*item.quantity).toLocaleString()}</div><button class="cart-rm" onclick="removeFromCart(${i})">✕</button></div>`).join('');
   const sub = cart.reduce((a,i)=>a+i.product.price*i.quantity,0);
   document.getElementById('cart-summary').innerHTML = `<div class="sum-row"><span>Subtotal</span><span>R ${sub.toLocaleString()}</span></div><div class="sum-row"><span>Shipping</span><span style="color:var(--success)">Calculated at checkout</span></div><div class="sum-row total"><span>Total</span><span>R ${sub.toLocaleString()}</span></div>`;
   renderCheckoutSummary();
@@ -1555,15 +1512,30 @@ function openProduct(id) {
   currentProduct = p;
   const s = p.sellers||{business_name:'Verified Seller',operating_hours:'Mon-Fri 08:00–17:00',phone:'27615494504',whatsapp_enabled:true};
   const imgs = p.images||[];
-  document.getElementById('m-img').src = imgs[0]||'';
-  document.getElementById('m-thumbs').innerHTML = imgs.map((img,i)=>`<img class="gal-thumb ${i===0?'active':''}" src="${img}" onclick="switchImg(this,'${img}')" alt="">`).join('');
+  document.getElementById('m-img').src = proxyImg(imgs[0]||'');
+  document.getElementById('m-thumbs').innerHTML = imgs.map((img,i)=>`<img class="gal-thumb ${i===0?'active':''}" src="${proxyImg(img)}" onclick="switchImg(this,'${proxyImg(img)}')" alt="">`).join('');
   const condEl = document.getElementById('m-cond'); condEl.textContent=p.condition; condEl.className='m-cond-badge '+(p.condition==='New'?'cn':p.condition==='Damaged/Salvage'?'cs':'cu');
   document.getElementById('m-cat').textContent = p.category;
   document.getElementById('m-make').textContent = p.make+' · '+p.model;
   document.getElementById('m-name').textContent = p.name;
   document.getElementById('m-price').textContent = 'R '+p.price.toLocaleString();
   document.getElementById('m-price-note').textContent = p.condition==='New'?'New part · Fixed price':p.condition==='Damaged/Salvage'?'Salvage vehicle · Price negotiable':'Used part · Price negotiable';
-  document.getElementById('m-desc').textContent = p.description||'';
+  // Clean description: strip HTML tags, fix escaped newlines, render as readable text
+  const rawDesc = (p.description||'');
+  const cleanDesc = rawDesc
+    .replace(/\\n/g, '\n')           // unescape \n
+    .replace(/<br\s*\/?>/gi, '\n')   // <br> to newline
+    .replace(/<\/?(h[1-6]|p|div|li|ul|ol|section|article)[^>]*>/gi, '\n') // block tags to newline
+    .replace(/<[^>]+>/g, '')         // strip all remaining HTML tags
+    .replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&nbsp;/g,' ').replace(/&#?[a-zA-Z0-9]+;/g,'') // decode entities
+    .replace(/\n{2,}/g, '\n')         // collapse multiple newlines to single
+    .trim();
+  const descEl = document.getElementById('m-desc');
+  descEl.style.whiteSpace = 'pre-line';
+  descEl.style.lineHeight = '1.5';
+  descEl.style.maxHeight = '180px';
+  descEl.style.overflowY = 'auto';
+  descEl.textContent = cleanDesc;
   document.getElementById('m-specs').innerHTML = `<div class="spec-item"><div class="spec-lbl">SKU</div><div class="spec-val">${p.sku||'—'}</div></div><div class="spec-item"><div class="spec-lbl">Quantity</div><div class="spec-val">${p.quantity||1}</div></div><div class="spec-item"><div class="spec-lbl">Fits</div><div class="spec-val">${p.year_start||''}–${p.year_end||''}</div></div><div class="spec-item"><div class="spec-lbl">Location</div><div class="spec-val">${p.location||'—'}</div></div>`;
   document.getElementById('m-shipping').innerHTML = (p.shipping_options||[]).map(sh=>`<span class="ship-tag">${sh==='Courier'?'📦':'🏪'} ${sh}</span>`).join('');
   const logo = document.getElementById('m-seller-logo');
@@ -1587,6 +1559,18 @@ function openProduct(id) {
 
 function switchImg(el,src){document.getElementById('m-img').src=src;document.querySelectorAll('.gal-thumb').forEach(t=>t.classList.remove('active'));el.classList.add('active');}
 function toggleEnqForm(){const f=document.getElementById('enq-form');f.style.display=f.style.display==='none'?'block':'none';}
+
+// ══════════════════════════════════════════════════════════════
+//  IMAGE PROXY — route external URLs through Cloudinary fetch
+//  so hotlink-blocking sites don't break card images
+// ══════════════════════════════════════════════════════════════
+function proxyImg(url) {
+  if (!url) return '';
+  // Already a Cloudinary URL — use as-is
+  if (url.includes('cloudinary.com')) return url;
+  // Proxy through Cloudinary fetch with auto format + quality + resize
+  return `https://res.cloudinary.com/${CLOUDINARY_CLOUD}/image/fetch/f_auto,q_auto,w_600/${encodeURIComponent(url)}`;
+}
 
 // ══════════════════════════════════════════════════════════════
 //  FILTERS & RENDER
@@ -1633,7 +1617,7 @@ function renderParts(data) {
   if(!data.length){grid.innerHTML='<div class="empty-state"><div class="empty-state-icon">🔍</div><h3>No parts found</h3><p style="font-size:12px;color:var(--text3);margin-top:.35rem">Try adjusting your search or filter criteria.</p></div>';return;}
   grid.innerHTML=data.map(p=>`
     <div class="part-card" onclick="openProduct('${p.id}')">
-      ${p.images?.length?`<div style="position:relative"><img class="card-img" src="${p.images[0]}" loading="lazy" alt="${p.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><span class="cond-pill ${condClass(p.condition)}" style="z-index:2">${p.condition}</span><div class="card-img-ph" style="display:none;position:absolute;inset:0"><div class="card-img-ph-bg">⚙️</div><span style="font-size:2.8rem;position:relative;z-index:1">⚙️</span></div></div>`:`<div class="card-img-ph" style="position:relative"><div class="card-img-ph-bg">⚙️</div><span style="font-size:2.8rem;position:relative;z-index:1">⚙️</span><span class="cond-pill ${condClass(p.condition)}">${p.condition}</span></div>`}
+      ${p.images?.length?`<div style="position:relative"><img class="card-img" src="${proxyImg(p.images[0])}" loading="lazy" alt="${p.name}" onerror="this.parentNode.innerHTML='<div class=\\'card-img-ph\\'style=\\'position:relative\\'><div class=\\'card-img-ph-bg\\'>⚙️</div><span style=\\'font-size:2.8rem;position:relative;z-index:1\\'>⚙️</span><span class=\\'cond-pill ${condClass(p.condition)}\\'>${p.condition}</span></div>'"><span class="cond-pill ${condClass(p.condition)}">${p.condition}</span></div>`:`<div class="card-img-ph" style="position:relative"><div class="card-img-ph-bg">⚙️</div><span style="font-size:2.8rem;position:relative;z-index:1">⚙️</span><span class="cond-pill ${condClass(p.condition)}">${p.condition}</span></div>`}
       <div class="card-body">
         <div class="card-make">${p.make} · ${p.model}</div>
         <div class="card-name">${p.name}</div>
@@ -1661,13 +1645,6 @@ function gotoView(view, btn) {
 
 function openDash(btn){if(!user){openAuth();return;}updateDashboard();gotoView('dashboard',btn);}
 function closeOverlay(id,e){if(e.target===document.getElementById(id))document.getElementById(id).classList.remove('open');}
-
-function toggleUserMenu(){document.getElementById('user-dropdown').classList.toggle('open');}
-function closeUserMenu(){document.getElementById('user-dropdown').classList.remove('open');}
-function toggleMobileMenu(){const m=document.getElementById('mobile-menu'),h=document.getElementById('hamburger');m.classList.toggle('open');h.classList.toggle('open');}
-function closeMobileMenu(){document.getElementById('mobile-menu').classList.remove('open');document.getElementById('hamburger').classList.remove('open');}
-// Close user dropdown when clicking outside
-document.addEventListener('click',e=>{const w=document.getElementById('user-menu-wrap');if(w&&!w.contains(e.target))closeUserMenu();});
 
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3200);}
 function showSuccess(icon,title,text){document.getElementById('s-icon').textContent=icon;document.getElementById('s-title').textContent=title;document.getElementById('s-text').textContent=text;document.getElementById('success-overlay').classList.add('show');}
@@ -1705,10 +1682,48 @@ function updateListModel(){
   if(make&&SA_VEHICLE_DATA[make])SA_VEHICLE_DATA[make].forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;sel.appendChild(o);});
 }
 
+
+function wirePublicUpload() {
+  const area = document.getElementById('public-upload-area');
+  if (!area) return;
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'image/*'; inp.multiple = true; inp.style.display = 'none';
+  area.appendChild(inp);
+  area.addEventListener('click', () => inp.click());
+  area.addEventListener('dragover', e => { e.preventDefault(); area.style.borderColor = 'var(--blue)'; });
+  area.addEventListener('dragleave', () => area.style.borderColor = '');
+  area.addEventListener('drop', e => { e.preventDefault(); area.style.borderColor = ''; handlePublicFiles(e.dataTransfer.files); });
+  inp.addEventListener('change', () => handlePublicFiles(inp.files));
+}
+
+async function handlePublicFiles(files) {
+  if (!files || !files.length) return;
+  showToast('Uploading ' + files.length + ' photo(s)…');
+  for (const file of Array.from(files)) {
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('upload_preset', CLOUDINARY_PRESET);
+    try {
+      const res = await fetch('https://api.cloudinary.com/v1_1/' + CLOUDINARY_CLOUD + '/image/upload', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.secure_url) {
+        const wrap = document.getElementById('public-upload-thumbs');
+        if (wrap) {
+          const img = document.createElement('img');
+          img.src = data.secure_url;
+          img.style.cssText = 'width:70px;height:52px;object-fit:cover;border-radius:6px;border:2px solid var(--blue)';
+          wrap.appendChild(img);
+        }
+        showToast('Photo uploaded ✓');
+      }
+    } catch(e) { showToast('Upload failed: ' + e.message); }
+  }
+}
+
 // ══ INIT ══
 populateDropdowns();
 wireUploadArea();
-wirePublicUploadArea();
+wirePublicUpload();
 loadListings();
 checkSession();
 </script>
