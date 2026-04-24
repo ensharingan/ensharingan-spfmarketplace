@@ -1565,11 +1565,7 @@ function toggleEnqForm(){const f=document.getElementById('enq-form');f.style.dis
 //  so hotlink-blocking sites don't break card images
 // ══════════════════════════════════════════════════════════════
 function proxyImg(url) {
-  if (!url) return '';
-  // Already a Cloudinary URL — use as-is
-  if (url.includes('cloudinary.com')) return url;
-  // Proxy through Cloudinary fetch with auto format + quality + resize
-  return `https://res.cloudinary.com/${CLOUDINARY_CLOUD}/image/fetch/f_auto,q_auto,w_600/${encodeURIComponent(url)}`;
+  return url || '';
 }
 
 // ══════════════════════════════════════════════════════════════
