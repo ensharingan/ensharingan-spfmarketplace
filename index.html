@@ -1053,6 +1053,26 @@ async function doRegister() {
   showSuccess('🎉', 'Welcome to SPF Marketplace!', role === 'seller' ? 'Account created! Check your email to verify, then sign in to access your seller dashboard.' : 'Account created! You can now browse and enquire on parts across South Africa.');
 }
 
+function showLoggedInNav(supaUser) {
+  const authBtn = document.getElementById('auth-btn');
+  const userWrap = document.getElementById('user-menu-wrap');
+  const navUsername = document.getElementById('nav-username');
+  if (authBtn) authBtn.style.display = 'none';
+  if (userWrap) userWrap.style.display = 'block';
+  if (navUsername) navUsername.textContent = (supaUser.user_metadata?.name || supaUser.email || 'User').split(/[@\s]/)[0];
+  const mobileAuthBtn = document.getElementById('mobile-auth-btn');
+  if (mobileAuthBtn) { mobileAuthBtn.textContent = 'Sign Out →'; mobileAuthBtn.onclick = () => { doLogout(); closeMobileMenu(); }; }
+}
+
+function showLoggedOutNav() {
+  const authBtn = document.getElementById('auth-btn');
+  const userWrap = document.getElementById('user-menu-wrap');
+  if (authBtn) authBtn.style.display = 'block';
+  if (userWrap) userWrap.style.display = 'none';
+  const mobileAuthBtn = document.getElementById('mobile-auth-btn');
+  if (mobileAuthBtn) { mobileAuthBtn.textContent = 'Sign In →'; mobileAuthBtn.onclick = () => { openAuth(); closeMobileMenu(); }; }
+}
+
 async function onAuth(supaUser, role) {
   user = { id: supaUser.id, email: supaUser.email, role };
   showLoggedInNav(supaUser);
@@ -1107,7 +1127,14 @@ async function loadListings() {
     .eq('status', 'active').order('created_at', { ascending: false });
   showGridLoading(false);
   if (error || !data) { useDemoData(); return; }
-  PARTS = data; filtered = [...PARTS];
+  PARTS = data.map(p => ({
+    ...p,
+    images: Array.isArray(p.images) ? p.images
+           : typeof p.images === 'string' && p.images.startsWith('[') ? (() => { try { return JSON.parse(p.images); } catch(e) { return []; } })()
+           : typeof p.images === 'string' && p.images.startsWith('http') ? [p.images]
+           : []
+  }));
+  filtered = [...PARTS];
   document.getElementById('stat-listing-count').textContent = PARTS.length + '+';
   renderParts(filtered);
 }
@@ -1253,7 +1280,13 @@ async function loadSellerData() {
   const { data: s } = await sb.from('sellers').select('*').eq('user_id', user.id).single();
   if (s) { sellerDbId = s.id; sellerProfile = s; }
   const { data: ls } = await sb.from('listings').select('*').eq('seller_id', sellerDbId).order('created_at', { ascending: false });
-  myListings = ls || [];
+  myListings = (ls || []).map(p => ({
+    ...p,
+    images: Array.isArray(p.images) ? p.images
+           : typeof p.images === 'string' && p.images.startsWith('[') ? (() => { try { return JSON.parse(p.images); } catch(e) { return []; } })()
+           : typeof p.images === 'string' && p.images.startsWith('http') ? [p.images]
+           : []
+  }));
   const { data: eq } = await sb.from('enquiries').select('*, listings(name)').eq('seller_id', sellerDbId).order('created_at', { ascending: false });
   sellerEnquiries = eq || [];
   const ids = myListings.map(l => l.id);
@@ -1355,7 +1388,7 @@ async function markReplied(id) {
 function renderMyListings(parts) {
   const el = document.getElementById('my-listings-list');
   if (!parts.length) { el.innerHTML = '<div style="text-align:center;padding:2.5rem;background:#fff;border:1.5px dashed var(--border2);border-radius:var(--rl)"><div style="font-size:2rem;opacity:.25;margin-bottom:.5rem">📦</div><div style="font-family:var(--font-h);font-size:16px;font-weight:800;text-transform:uppercase;color:var(--text3)">No listings yet</div><div style="font-size:12px;color:var(--text3);margin-top:.35rem">Click <strong>Add New Part</strong> to publish your first listing.</div></div>'; return; }
-  el.innerHTML = parts.map(p => `<div class="listing-row">${p.images?.length?`<img class="listing-thumb" src="${p.images[0]}" alt="" loading="lazy" onerror="this.parentNode.innerHTML='<div class=\'listing-thumb-ph\'>⚙️</div>'">`:'<div class="listing-thumb-ph">⚙️</div>'}<div><div class="listing-name">${p.name}</div><div class="listing-meta">${p.make} ${p.model} · ${p.year_start||''}–${p.year_end||''} · <span class="pill ${condClass(p.condition)==='cn'?'pill-active':condClass(p.condition)==='cs'?'pill-new':'pill-pending'}">${p.condition}</span> · <strong style="color:var(--blue)">R ${p.price.toLocaleString()}</strong></div><div class="listing-meta" style="margin-top:2px">SKU: ${p.sku||'—'} · ${p.location||'—'} · ${(p.shipping_options||[]).join(', ')}</div></div><div class="listing-acts"><button class="act-btn edit" onclick="editPart('${p.id}')">Edit</button><button class="act-btn del" onclick="deletePart('${p.id}')">Remove</button></div></div>`).join('');
+  el.innerHTML = parts.map(p => `<div class="listing-row">${p.images?.length?`<img class="listing-thumb" src="${proxyImg(p.images[0])}" alt="" loading="lazy" onerror="this.parentNode.innerHTML='<div class=\'listing-thumb-ph\'>⚙️</div>'">`:'<div class="listing-thumb-ph">⚙️</div>'}<div><div class="listing-name">${p.name}</div><div class="listing-meta">${p.make} ${p.model} · ${p.year_start||''}–${p.year_end||''} · <span class="pill ${condClass(p.condition)==='cn'?'pill-active':condClass(p.condition)==='cs'?'pill-new':'pill-pending'}">${p.condition}</span> · <strong style="color:var(--blue)">R ${p.price.toLocaleString()}</strong></div><div class="listing-meta" style="margin-top:2px">SKU: ${p.sku||'—'} · ${p.location||'—'} · ${(p.shipping_options||[]).join(', ')}</div></div><div class="listing-acts"><button class="act-btn edit" onclick="editPart('${p.id}')">Edit</button><button class="act-btn del" onclick="deletePart('${p.id}')">Remove</button></div></div>`).join('');
 }
 
 function renderOrders(ords) {
@@ -1443,7 +1476,7 @@ function addToCart(p) {
 function renderCart() {
   const el = document.getElementById('cart-items-list');
   if (!cart.length) { el.innerHTML='<div style="text-align:center;padding:2rem;color:var(--text3)">Your cart is empty.</div>'; document.getElementById('cart-summary').innerHTML=''; return; }
-  el.innerHTML = cart.map((item,i) => `<div class="cart-item">${item.product.images?.length?`<img class="cart-thumb" src="${item.product.images[0]}" alt="">`:'<div class="cart-thumb-ph">⚙️</div>'}<div style="flex:1"><div class="cart-name">${item.product.name}</div><div class="cart-meta">${item.product.make} · ${item.product.model} · ${item.product.condition} · Qty: ${item.quantity}</div></div><div class="cart-price">R ${(item.product.price*item.quantity).toLocaleString()}</div><button class="cart-rm" onclick="removeFromCart(${i})">✕</button></div>`).join('');
+  el.innerHTML = cart.map((item,i) => `<div class="cart-item">${item.product.images?.length?`<img class="cart-thumb" src="${proxyImg(item.product.images[0])}" alt="">`:'<div class="cart-thumb-ph">⚙️</div>'}<div style="flex:1"><div class="cart-name">${item.product.name}</div><div class="cart-meta">${item.product.make} · ${item.product.model} · ${item.product.condition} · Qty: ${item.quantity}</div></div><div class="cart-price">R ${(item.product.price*item.quantity).toLocaleString()}</div><button class="cart-rm" onclick="removeFromCart(${i})">✕</button></div>`).join('');
   const sub = cart.reduce((a,i)=>a+i.product.price*i.quantity,0);
   document.getElementById('cart-summary').innerHTML = `<div class="sum-row"><span>Subtotal</span><span>R ${sub.toLocaleString()}</span></div><div class="sum-row"><span>Shipping</span><span style="color:var(--success)">Calculated at checkout</span></div><div class="sum-row total"><span>Total</span><span>R ${sub.toLocaleString()}</span></div>`;
   renderCheckoutSummary();
@@ -1479,8 +1512,8 @@ function openProduct(id) {
   currentProduct = p;
   const s = p.sellers||{business_name:'Verified Seller',operating_hours:'Mon-Fri 08:00–17:00',phone:'27615494504',whatsapp_enabled:true};
   const imgs = p.images||[];
-  document.getElementById('m-img').src = imgs[0]||'';
-  document.getElementById('m-thumbs').innerHTML = imgs.map((img,i)=>`<img class="gal-thumb ${i===0?'active':''}" src="${img}" onclick="switchImg(this,'${img}')" alt="">`).join('');
+  document.getElementById('m-img').src = proxyImg(imgs[0]||'');
+  document.getElementById('m-thumbs').innerHTML = imgs.map((img,i)=>`<img class="gal-thumb ${i===0?'active':''}" src="${proxyImg(img)}" onclick="switchImg(this,'${proxyImg(img)}')" alt="">`).join('');
   const condEl = document.getElementById('m-cond'); condEl.textContent=p.condition; condEl.className='m-cond-badge '+(p.condition==='New'?'cn':p.condition==='Damaged/Salvage'?'cs':'cu');
   document.getElementById('m-cat').textContent = p.category;
   document.getElementById('m-make').textContent = p.make+' · '+p.model;
@@ -1511,6 +1544,18 @@ function openProduct(id) {
 
 function switchImg(el,src){document.getElementById('m-img').src=src;document.querySelectorAll('.gal-thumb').forEach(t=>t.classList.remove('active'));el.classList.add('active');}
 function toggleEnqForm(){const f=document.getElementById('enq-form');f.style.display=f.style.display==='none'?'block':'none';}
+
+// ══════════════════════════════════════════════════════════════
+//  IMAGE PROXY — route external URLs through Cloudinary fetch
+//  so hotlink-blocking sites don't break card images
+// ══════════════════════════════════════════════════════════════
+function proxyImg(url) {
+  if (!url) return '';
+  // Already a Cloudinary URL — use as-is
+  if (url.includes('cloudinary.com')) return url;
+  // Proxy through Cloudinary fetch with auto format + quality + resize
+  return `https://res.cloudinary.com/${CLOUDINARY_CLOUD}/image/fetch/f_auto,q_auto,w_600/${encodeURIComponent(url)}`;
+}
 
 // ══════════════════════════════════════════════════════════════
 //  FILTERS & RENDER
@@ -1557,7 +1602,7 @@ function renderParts(data) {
   if(!data.length){grid.innerHTML='<div class="empty-state"><div class="empty-state-icon">🔍</div><h3>No parts found</h3><p style="font-size:12px;color:var(--text3);margin-top:.35rem">Try adjusting your search or filter criteria.</p></div>';return;}
   grid.innerHTML=data.map(p=>`
     <div class="part-card" onclick="openProduct('${p.id}')">
-      ${p.images?.length?`<div style="position:relative"><img class="card-img" src="${p.images[0]}" loading="lazy" alt="${p.name}"><span class="cond-pill ${condClass(p.condition)}">${p.condition}</span></div>`:`<div class="card-img-ph" style="position:relative"><div class="card-img-ph-bg">⚙️</div><span style="font-size:2.8rem;position:relative;z-index:1">⚙️</span><span class="cond-pill ${condClass(p.condition)}">${p.condition}</span></div>`}
+      ${p.images?.length?`<div style="position:relative"><img class="card-img" src="${proxyImg(p.images[0])}" loading="lazy" alt="${p.name}" onerror="this.parentNode.innerHTML='<div class=\\'card-img-ph\\'style=\\'position:relative\\'><div class=\\'card-img-ph-bg\\'>⚙️</div><span style=\\'font-size:2.8rem;position:relative;z-index:1\\'>⚙️</span><span class=\\'cond-pill ${condClass(p.condition)}\\'>${p.condition}</span></div>'"><span class="cond-pill ${condClass(p.condition)}">${p.condition}</span></div>`:`<div class="card-img-ph" style="position:relative"><div class="card-img-ph-bg">⚙️</div><span style="font-size:2.8rem;position:relative;z-index:1">⚙️</span><span class="cond-pill ${condClass(p.condition)}">${p.condition}</span></div>`}
       <div class="card-body">
         <div class="card-make">${p.make} · ${p.model}</div>
         <div class="card-name">${p.name}</div>
