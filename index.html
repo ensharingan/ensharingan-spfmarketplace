@@ -1645,6 +1645,11 @@ function gotoView(view, btn) {
 
 function openDash(btn){if(!user){openAuth();return;}updateDashboard();gotoView('dashboard',btn);}
 function closeOverlay(id,e){if(e.target===document.getElementById(id))document.getElementById(id).classList.remove('open');}
+function toggleUserMenu(){document.getElementById('user-dropdown').classList.toggle('open');}
+function closeUserMenu(){document.getElementById('user-dropdown').classList.remove('open');}
+function toggleMobileMenu(){const m=document.getElementById('mobile-menu'),h=document.getElementById('hamburger');m.classList.toggle('open');h.classList.toggle('open');}
+function closeMobileMenu(){document.getElementById('mobile-menu').classList.remove('open');document.getElementById('hamburger').classList.remove('open');}
+document.addEventListener('click',e=>{const w=document.getElementById('user-menu-wrap');if(w&&!w.contains(e.target))closeUserMenu();});
 
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3200);}
 function showSuccess(icon,title,text){document.getElementById('s-icon').textContent=icon;document.getElementById('s-title').textContent=title;document.getElementById('s-text').textContent=text;document.getElementById('success-overlay').classList.add('show');}
