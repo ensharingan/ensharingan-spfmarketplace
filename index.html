@@ -1565,7 +1565,16 @@ function toggleEnqForm(){const f=document.getElementById('enq-form');f.style.dis
 //  so hotlink-blocking sites don't break card images
 // ══════════════════════════════════════════════════════════════
 function proxyImg(url) {
-  return url || '';
+  if (!url) return '';
+  // Already on Cloudinary — serve directly
+  if (url.includes('cloudinary.com')) return url;
+  // WordPress media URLs — proxy through Cloudinary fetch so they load fast
+  // and bypass any hotlink issues. WordPress media is publicly accessible.
+  if (url.includes('/wp-content/uploads/')) {
+    return `https://res.cloudinary.com/${CLOUDINARY_CLOUD}/image/fetch/f_auto,q_auto,w_600/${encodeURIComponent(url)}`;
+  }
+  // Everything else — serve directly
+  return url;
 }
 
 // ══════════════════════════════════════════════════════════════
