@@ -1120,6 +1120,32 @@ function setRole(r) {
 // ══════════════════════════════════════════════════════════════
 //  LISTINGS — LOAD FROM SUPABASE
 // ══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
+//  IMAGE ARRAY NORMALISER
+//  Supabase/PostgREST returns text[] columns in several shapes:
+//    • a real array            ["https://a.jpg"]
+//    • a JSON string           '["https://a.jpg"]'
+//    • a Postgres array literal '{"https://a.jpg","https://b.jpg"}'
+//    • a single bare URL        'https://a.jpg'
+//  Always run raw DB values through this before rendering.
+// ══════════════════════════════════════════════════════════════
+function normImages(raw) {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw.filter(u => typeof u === 'string' && u.trim());
+  if (typeof raw !== 'string') return [];
+  const s = raw.trim();
+  if (!s || s === '{}' || s === '[]') return [];
+  if (s[0] === '[') {
+    try { const a = JSON.parse(s); if (Array.isArray(a)) return a.filter(Boolean); } catch (e) {}
+  }
+  if (s[0] === '{') {
+    return (s.slice(1, -1).match(/"(?:[^"\\]|\\.)*"|[^,]+/g) || [])
+      .map(x => x.trim().replace(/^"|"$/g, '').replace(/\\"/g, '"'))
+      .filter(u => u && u !== 'NULL');
+  }
+  return /^https?:\/\//.test(s) ? [s] : [];
+}
+
 async function loadListings() {
   showGridLoading(true);
   const { data, error } = await sb.from('listings')
@@ -1127,13 +1153,7 @@ async function loadListings() {
     .eq('status', 'active').order('created_at', { ascending: false });
   showGridLoading(false);
   if (error || !data) { useDemoData(); return; }
-  PARTS = data.map(p => ({
-    ...p,
-    images: Array.isArray(p.images) ? p.images
-           : typeof p.images === 'string' && p.images.startsWith('[') ? (() => { try { return JSON.parse(p.images); } catch(e) { return []; } })()
-           : typeof p.images === 'string' && p.images.startsWith('http') ? [p.images]
-           : []
-  }));
+  PARTS = data.map(p => ({ ...p, images: normImages(p.images) }));
   filtered = [...PARTS];
   document.getElementById('stat-listing-count').textContent = PARTS.length + '+';
   renderParts(filtered);
@@ -1280,13 +1300,7 @@ async function loadSellerData() {
   const { data: s } = await sb.from('sellers').select('*').eq('user_id', user.id).single();
   if (s) { sellerDbId = s.id; sellerProfile = s; }
   const { data: ls } = await sb.from('listings').select('*').eq('seller_id', sellerDbId).order('created_at', { ascending: false });
-  myListings = (ls || []).map(p => ({
-    ...p,
-    images: Array.isArray(p.images) ? p.images
-           : typeof p.images === 'string' && p.images.startsWith('[') ? (() => { try { return JSON.parse(p.images); } catch(e) { return []; } })()
-           : typeof p.images === 'string' && p.images.startsWith('http') ? [p.images]
-           : []
-  }));
+  myListings = (ls || []).map(p => ({ ...p, images: normImages(p.images) }));
   const { data: eq } = await sb.from('enquiries').select('*, listings(name)').eq('seller_id', sellerDbId).order('created_at', { ascending: false });
   sellerEnquiries = eq || [];
   const ids = myListings.map(l => l.id);
