@@ -1802,10 +1802,12 @@ function applyFilters() {
   const pmax=parseFloat(document.getElementById('f-pmax')?.value)||Infinity;
   const ship=document.getElementById('f-ship')?.value||'';
   filtered = PARTS.filter(p => {
-    const mq=!q||(p.name+p.description+p.sku+p.make+p.model).toLowerCase().includes(q);
-    const mm=!make||p.make===make; const mo=!model||p.model===model;
+    const hay=(p.name+' '+p.description+' '+p.sku+' '+p.make+' '+p.model+' '+p.category).toLowerCase();
+    const mq=!q||q.split(/\s+/).filter(Boolean).every(t=>hay.includes(t));
+    const eq=(a,b)=>String(a||'').trim().toLowerCase()===String(b||'').trim().toLowerCase();
+    const mm=!make||eq(p.make,make); const mo=!model||eq(p.model,model);
     const my=!year||(year>=(p.year_start||0)&&year<=(p.year_end||9999));
-    const mc=!activeCat||p.category===activeCat; const mco=!cond||p.condition===cond;
+    const mc=!activeCat||eq(p.category,activeCat); const mco=!cond||eq(p.condition,cond);
     const mp=p.price>=pmin&&p.price<=pmax; const ms=!ship||(p.shipping_options||[]).includes(ship);
     return mq&&mm&&mo&&my&&mc&&mco&&mp&&ms;
   });
