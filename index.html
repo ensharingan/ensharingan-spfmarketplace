@@ -3,6 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-NG9QGJNP9N"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-NG9QGJNP9N');
+</script>
 <title>Spare Parts Finder — Marketplace</title>
 <meta name="description" content="South Africa's trusted auto spare parts marketplace. Buy and sell new, used and salvage vehicle parts from verified local sellers.">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -1193,12 +1202,24 @@ function setRole(r) {
 // ══════════════════════════════════════════════════════════════
 async function loadListings() {
   showGridLoading(true);
-  const { data, error } = await sb.from('listings')
-    .select('*, sellers(business_name,phone,whatsapp_enabled,operating_hours,logo_url)')
-    .eq('status', 'active').order('created_at', { ascending: false });
+  // Supabase caps a single select() at 1000 rows — page through or most of the
+  // catalogue never reaches the browser (older sellers silently disappear).
+  const PAGE = 1000;
+  let all = [], error = null;
+  for (let from = 0; ; from += PAGE) {
+    const res = await sb.from('listings')
+      .select('*, sellers(business_name,phone,whatsapp_enabled,operating_hours,logo_url)')
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
+      .range(from, from + PAGE - 1);
+    if (res.error) { error = res.error; break; }
+    all.push(...(res.data || []));
+    if (!res.data || res.data.length < PAGE) break;
+    if (from > 20000) break;               // safety valve
+  }
   showGridLoading(false);
-  if (error || !data) { useDemoData(); return; }
-  PARTS = data; filtered = [...PARTS];
+  if (error || !all.length) { useDemoData(); return; }
+  PARTS = all; filtered = [...PARTS];
   document.getElementById('stat-listing-count').textContent = PARTS.length + '+';
   renderParts(filtered);
 }
