@@ -711,6 +711,7 @@ footer{background:var(--blue3);padding:2rem 1.5rem 1.25rem;margin-top:3rem}
           <div class="dnav-item active" onclick="switchPanel('overview',this)"><span class="dnav-icon">📊</span>Overview</div>
           <div class="dnav-item" onclick="switchPanel('listings',this)"><span class="dnav-icon">📦</span>My Listings<span class="dnav-badge blue" id="dnb-listings">0</span></div>
           <div class="dnav-item" onclick="switchPanel('addpart',this)"><span class="dnav-icon">➕</span>Add New Part</div>
+          <div class="dnav-item" onclick="switchPanel('bulk',this)"><span class="dnav-icon">📤</span>Bulk Upload</div>
           <div class="dnav-item" onclick="switchPanel('leads',this)"><span class="dnav-icon">🔔</span>Leads &amp; Enquiries<span class="dnav-badge" id="dnb-leads">0</span></div>
           <div class="dnav-item" onclick="switchPanel('orders',this)"><span class="dnav-icon">🛒</span>Orders<span class="dnav-badge blue" id="dnb-orders">0</span></div>
           <div class="dnav-item" onclick="switchPanel('profile',this)"><span class="dnav-icon">👤</span>My Profile</div>
@@ -742,6 +743,63 @@ footer{background:var(--blue3);padding:2rem 1.5rem 1.25rem;margin-top:3rem}
             <button class="panel-btn" onclick="switchPanel('addpart',document.querySelectorAll('.dnav-item')[2])">+ Add New Part</button>
           </div>
           <div id="my-listings-list"></div>
+        </div>
+
+        <!-- BULK UPLOAD -->
+        <div class="dash-panel" id="panel-bulk">
+          <div class="panel-hd"><div class="panel-title">Bulk Upload Listings</div></div>
+
+          <div style="background:var(--blue-dim);border:1px solid var(--blue-mid);border-radius:var(--rl);padding:14px;margin-bottom:16px">
+            <div style="font-family:var(--font-h);font-weight:800;text-transform:uppercase;letter-spacing:.05em;font-size:13px;color:var(--blue);margin-bottom:6px">How it works</div>
+            <div style="font-size:12.5px;color:var(--text2);line-height:1.6">
+              Export your products to CSV (WooCommerce &rarr; Products &rarr; Export, or use our template) and drop the file below.
+              Image URLs in the CSV are imported automatically.
+              Uploaded listings are <strong>reviewed before going live</strong> &mdash; usually within 24 hours.
+            </div>
+          </div>
+
+          <div id="bulk-drop" tabindex="0"
+               style="border:2px dashed var(--border2);border-radius:var(--rl);padding:2rem;text-align:center;cursor:pointer;transition:all .15s;margin-bottom:12px;background:var(--bg2)"
+               onclick="document.getElementById('bulk-file').click()"
+               ondragover="event.preventDefault();this.style.borderColor='var(--blue)';this.style.background='var(--blue-dim)'"
+               ondragleave="this.style.borderColor='';this.style.background='var(--bg2)'"
+               ondrop="event.preventDefault();this.style.borderColor='';this.style.background='var(--bg2)';sellerBulkFile(event.dataTransfer.files[0])">
+            <div style="font-size:2rem;opacity:.3;margin-bottom:.4rem">📄</div>
+            <div style="font-family:var(--font-h);font-size:14px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--text2)">Drop CSV here or click to browse</div>
+            <div style="font-size:11.5px;color:var(--text3);margin-top:4px">.csv files only &middot; max 5,000 rows</div>
+          </div>
+          <input type="file" id="bulk-file" accept=".csv" style="display:none" onchange="sellerBulkFile(this.files[0])">
+
+          <div id="bulk-msg" style="font-size:12.5px;color:var(--text2);margin-bottom:12px"></div>
+
+          <div id="bulk-preview" style="display:none">
+            <div class="panel-hd" style="margin-bottom:10px">
+              <div class="panel-title" style="font-size:15px" id="bulk-count">Preview</div>
+              <div style="display:flex;gap:8px">
+                <button class="panel-btn" style="background:transparent;border:1.5px solid var(--border);color:var(--text3)" onclick="sellerBulkCancel()">Cancel</button>
+                <button class="panel-btn" id="bulk-go" onclick="sellerBulkImport()">Upload for Review</button>
+              </div>
+            </div>
+            <div style="overflow-x:auto;border:1px solid var(--border);border-radius:var(--rl);background:#fff">
+              <table style="width:100%;border-collapse:collapse;font-size:12px">
+                <thead><tr style="background:var(--bg2);text-align:left">
+                  <th style="padding:8px 10px">Image</th><th style="padding:8px 10px">Part</th>
+                  <th style="padding:8px 10px">Make</th><th style="padding:8px 10px">Model</th>
+                  <th style="padding:8px 10px">Price</th><th style="padding:8px 10px">Imgs</th>
+                </tr></thead>
+                <tbody id="bulk-tbody"></tbody>
+              </table>
+            </div>
+            <div style="font-size:11.5px;color:var(--text3);margin-top:8px" id="bulk-more"></div>
+          </div>
+
+          <div id="bulk-prog" style="display:none;background:#fff;border:1px solid var(--border);border-radius:var(--rl);padding:16px">
+            <div style="font-family:var(--font-h);font-weight:800;text-transform:uppercase;font-size:14px;color:var(--text);margin-bottom:8px" id="bulk-prog-title">Uploading…</div>
+            <div style="height:8px;background:var(--bg);border-radius:99px;overflow:hidden;margin-bottom:8px">
+              <div id="bulk-bar" style="height:100%;width:0%;background:var(--blue);transition:width .2s"></div>
+            </div>
+            <div style="font-size:12px;color:var(--text2)" id="bulk-prog-text">0 of 0</div>
+          </div>
         </div>
 
         <!-- ADD PART -->
@@ -1053,26 +1111,6 @@ async function doRegister() {
   showSuccess('🎉', 'Welcome to SPF Marketplace!', role === 'seller' ? 'Account created! Check your email to verify, then sign in to access your seller dashboard.' : 'Account created! You can now browse and enquire on parts across South Africa.');
 }
 
-function showLoggedInNav(supaUser) {
-  const authBtn = document.getElementById('auth-btn');
-  const userWrap = document.getElementById('user-menu-wrap');
-  const navUsername = document.getElementById('nav-username');
-  if (authBtn) authBtn.style.display = 'none';
-  if (userWrap) userWrap.style.display = 'block';
-  if (navUsername) navUsername.textContent = (supaUser.user_metadata?.name || supaUser.email || 'User').split(/[@\s]/)[0];
-  const mobileAuthBtn = document.getElementById('mobile-auth-btn');
-  if (mobileAuthBtn) { mobileAuthBtn.textContent = 'Sign Out →'; mobileAuthBtn.onclick = () => { doLogout(); closeMobileMenu(); }; }
-}
-
-function showLoggedOutNav() {
-  const authBtn = document.getElementById('auth-btn');
-  const userWrap = document.getElementById('user-menu-wrap');
-  if (authBtn) authBtn.style.display = 'block';
-  if (userWrap) userWrap.style.display = 'none';
-  const mobileAuthBtn = document.getElementById('mobile-auth-btn');
-  if (mobileAuthBtn) { mobileAuthBtn.textContent = 'Sign In →'; mobileAuthBtn.onclick = () => { openAuth(); closeMobileMenu(); }; }
-}
-
 async function onAuth(supaUser, role) {
   user = { id: supaUser.id, email: supaUser.email, role };
   showLoggedInNav(supaUser);
@@ -1120,32 +1158,6 @@ function setRole(r) {
 // ══════════════════════════════════════════════════════════════
 //  LISTINGS — LOAD FROM SUPABASE
 // ══════════════════════════════════════════════════════════════
-// ══════════════════════════════════════════════════════════════
-//  IMAGE ARRAY NORMALISER
-//  Supabase/PostgREST returns text[] columns in several shapes:
-//    • a real array            ["https://a.jpg"]
-//    • a JSON string           '["https://a.jpg"]'
-//    • a Postgres array literal '{"https://a.jpg","https://b.jpg"}'
-//    • a single bare URL        'https://a.jpg'
-//  Always run raw DB values through this before rendering.
-// ══════════════════════════════════════════════════════════════
-function normImages(raw) {
-  if (!raw) return [];
-  if (Array.isArray(raw)) return raw.filter(u => typeof u === 'string' && u.trim());
-  if (typeof raw !== 'string') return [];
-  const s = raw.trim();
-  if (!s || s === '{}' || s === '[]') return [];
-  if (s[0] === '[') {
-    try { const a = JSON.parse(s); if (Array.isArray(a)) return a.filter(Boolean); } catch (e) {}
-  }
-  if (s[0] === '{') {
-    return (s.slice(1, -1).match(/"(?:[^"\\]|\\.)*"|[^,]+/g) || [])
-      .map(x => x.trim().replace(/^"|"$/g, '').replace(/\\"/g, '"'))
-      .filter(u => u && u !== 'NULL');
-  }
-  return /^https?:\/\//.test(s) ? [s] : [];
-}
-
 async function loadListings() {
   showGridLoading(true);
   const { data, error } = await sb.from('listings')
@@ -1153,8 +1165,7 @@ async function loadListings() {
     .eq('status', 'active').order('created_at', { ascending: false });
   showGridLoading(false);
   if (error || !data) { useDemoData(); return; }
-  PARTS = data.map(p => ({ ...p, images: normImages(p.images) }));
-  filtered = [...PARTS];
+  PARTS = data; filtered = [...PARTS];
   document.getElementById('stat-listing-count').textContent = PARTS.length + '+';
   renderParts(filtered);
 }
@@ -1300,7 +1311,7 @@ async function loadSellerData() {
   const { data: s } = await sb.from('sellers').select('*').eq('user_id', user.id).single();
   if (s) { sellerDbId = s.id; sellerProfile = s; }
   const { data: ls } = await sb.from('listings').select('*').eq('seller_id', sellerDbId).order('created_at', { ascending: false });
-  myListings = (ls || []).map(p => ({ ...p, images: normImages(p.images) }));
+  myListings = ls || [];
   const { data: eq } = await sb.from('enquiries').select('*, listings(name)').eq('seller_id', sellerDbId).order('created_at', { ascending: false });
   sellerEnquiries = eq || [];
   const ids = myListings.map(l => l.id);
@@ -1402,7 +1413,7 @@ async function markReplied(id) {
 function renderMyListings(parts) {
   const el = document.getElementById('my-listings-list');
   if (!parts.length) { el.innerHTML = '<div style="text-align:center;padding:2.5rem;background:#fff;border:1.5px dashed var(--border2);border-radius:var(--rl)"><div style="font-size:2rem;opacity:.25;margin-bottom:.5rem">📦</div><div style="font-family:var(--font-h);font-size:16px;font-weight:800;text-transform:uppercase;color:var(--text3)">No listings yet</div><div style="font-size:12px;color:var(--text3);margin-top:.35rem">Click <strong>Add New Part</strong> to publish your first listing.</div></div>'; return; }
-  el.innerHTML = parts.map(p => `<div class="listing-row">${p.images?.length?`<img class="listing-thumb" src="${proxyImg(p.images[0])}" alt="" loading="lazy" onerror="this.parentNode.innerHTML='<div class=\'listing-thumb-ph\'>⚙️</div>'">`:'<div class="listing-thumb-ph">⚙️</div>'}<div><div class="listing-name">${p.name}</div><div class="listing-meta">${p.make} ${p.model} · ${p.year_start||''}–${p.year_end||''} · <span class="pill ${condClass(p.condition)==='cn'?'pill-active':condClass(p.condition)==='cs'?'pill-new':'pill-pending'}">${p.condition}</span> · <strong style="color:var(--blue)">R ${p.price.toLocaleString()}</strong></div><div class="listing-meta" style="margin-top:2px">SKU: ${p.sku||'—'} · ${p.location||'—'} · ${(p.shipping_options||[]).join(', ')}</div></div><div class="listing-acts"><button class="act-btn edit" onclick="editPart('${p.id}')">Edit</button><button class="act-btn del" onclick="deletePart('${p.id}')">Remove</button></div></div>`).join('');
+  el.innerHTML = parts.map(p => `<div class="listing-row">${p.images?.length?`<img class="listing-thumb" src="${p.images[0]}" alt="" loading="lazy" onerror="this.parentNode.innerHTML='<div class=\'listing-thumb-ph\'>⚙️</div>'">`:'<div class="listing-thumb-ph">⚙️</div>'}<div><div class="listing-name">${p.name}</div><div class="listing-meta">${p.make} ${p.model} · ${p.year_start||''}–${p.year_end||''} · <span class="pill ${condClass(p.condition)==='cn'?'pill-active':condClass(p.condition)==='cs'?'pill-new':'pill-pending'}">${p.condition}</span> · <strong style="color:var(--blue)">R ${p.price.toLocaleString()}</strong></div><div class="listing-meta" style="margin-top:2px">SKU: ${p.sku||'—'} · ${p.location||'—'} · ${(p.shipping_options||[]).join(', ')}</div></div><div class="listing-acts"><button class="act-btn edit" onclick="editPart('${p.id}')">Edit</button><button class="act-btn del" onclick="deletePart('${p.id}')">Remove</button></div></div>`).join('');
 }
 
 function renderOrders(ords) {
@@ -1417,6 +1428,190 @@ function switchPanel(panel, el) {
   document.getElementById('panel-'+panel)?.classList.add('active');
   document.querySelectorAll('.dnav-item').forEach(n => n.classList.remove('active'));
   if (el) el.classList.add('active');
+}
+
+// ══════════════ SELLER BULK UPLOAD ══════════════
+let bulkRows = [];
+
+// CSV content is untrusted — never interpolate it raw into innerHTML.
+function escapeHtml(v) {
+  return String(v == null ? '' : v)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function parseCSV(text) {
+  const rows = []; let row = []; let cell = ''; let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (c === '"') { inQuotes = !inQuotes; }
+    else if (c === ',' && !inQuotes) { row.push(cell); cell = ''; }
+    else if ((c === '\n' || c === '\r') && !inQuotes) {
+      if (c === '\r' && text[i+1] === '\n') i++;
+      row.push(cell); rows.push(row); row = []; cell = '';
+    } else { cell += c; }
+  }
+  if (cell || row.length) { row.push(cell); rows.push(row); }
+  return rows;
+}
+
+function mapWooCategory(cat) {
+  const map = {
+    'engine': 'Engine & Components', 'body': 'Body Parts',
+    'lighting': 'Headlights & Lighting', 'electrical': 'Electrical Systems',
+    'suspension': 'Suspension & Steering', 'transmission': 'Transmission',
+    'interior': 'Interior', 'wheels': 'Wheels & Tyres', 'salvage': 'Stripping for Parts'
+  };
+  const lower = cat.toLowerCase();
+  for (const [k, v] of Object.entries(map)) { if (lower.includes(k)) return v; }
+  return 'Engine & Components';
+}
+
+function extractMake(title) {
+  const makes = ['BMW','Mercedes','Toyota','Volkswagen','VW','Ford','Nissan','Hyundai','Kia','Audi','Honda','Mazda','Suzuki','Isuzu','Mitsubishi','Renault','Land Rover'];
+  for (const m of makes) { if (title.toUpperCase().includes(m.toUpperCase())) return m === 'VW' ? 'Volkswagen' : m; }
+  return null;
+}
+
+function mapCondition(c) {
+  const l = c.toLowerCase();
+  if (l.includes('new')) return 'New';
+  if (l.includes('salvage') || l.includes('damage')) return 'Damaged/Salvage';
+  return 'Used';
+}
+
+// Strip WooCommerce/WP All Export metadata that otherwise corrupts image URLs.
+function cleanImageField(raw) {
+  if (!raw) return [];
+  return String(raw)
+    .split('|')
+    .map(x => x.replace(/\s*!\s*(alt|title|desc|caption)\s*:.*$/i, ''))
+    .map(x => x.split(',')[0])
+    .map(x => x.trim())
+    .filter(u => /^https?:\/\/[^\s"'`<>]+\.(jpe?g|png|webp|gif|avif)(\?[^\s"'`<>]*)?$/i.test(u));
+}
+function makeFromCat(c) { return c ? c.split('|')[0].split('>')[0].trim().replace(/-/g,' ') : ''; }
+function modelFromCat(c) { return (c && c.includes('>')) ? c.split('|')[0].split('>')[1].trim() : ''; }
+
+function mapRowToListing(r) {
+  const cat  = r.tax_product_cat || r.category || '';
+  const imgs = cleanImageField(r.images);
+  return {
+    name: (r.post_title || r.name || '').trim(),
+    category: mapWooCategory(cat),
+    make: r.attribute_make || makeFromCat(cat) || extractMake(r.post_title || r.name || '') || 'Other',
+    model: r.attribute_model || modelFromCat(cat) || 'Various',
+    year_start: parseInt(r.attribute_year || r.year_start) || null,
+    year_end: parseInt(r.attribute_year_to || r.year_end) || null,
+    condition: mapCondition(r.attribute_condition || r.condition || 'Used'),
+    price: parseFloat(r.regular_price || r._regular_price || r.price || 0) || 0,
+    sku: (r.sku || '').trim(),
+    description: r.post_content || r.description || '',
+    location: r.attribute_location || r.location || sellerProfile.province || 'Johannesburg',
+    shipping_options: ['Collection','Courier'],
+    images: imgs,
+    quantity: parseInt(r.stock) || 1,
+    _img: imgs[0] || ''
+  };
+}
+
+function sellerBulkFile(file) {
+  if (!file) return;
+  if (!file.name.toLowerCase().endsWith('.csv')) { showToast('Please choose a .csv file.'); return; }
+  const msg = document.getElementById('bulk-msg');
+  msg.textContent = 'Reading ' + file.name + '…';
+  const fr = new FileReader();
+  fr.onerror = () => { msg.textContent = 'Could not read that file.'; };
+  fr.onload = e => {
+    try {
+      const rows = parseCSV(e.target.result || '');
+      if (rows.length < 2) { msg.textContent = 'That CSV has no data rows.'; return; }
+      const heads = rows[0].map(h => (h||'').toLowerCase().trim().replace(/[^a-z0-9_]/g,'_'));
+      const listings = rows.slice(1)
+        .filter(r => r && r.some(c => (c||'').trim()))
+        .map(r => { const o={}; heads.forEach((h,i)=>o[h]=(r[i]||'').trim()); return mapRowToListing(o); })
+        .filter(l => l.name);
+      if (!listings.length) { msg.textContent = 'No valid rows found — check the CSV has a part-name column.'; return; }
+      if (listings.length > 5000) { msg.textContent = 'That file has ' + listings.length + ' rows. Please split it into files of 5,000 or fewer.'; return; }
+      bulkRows = listings;
+      const noImg = listings.filter(l => !l.images.length).length;
+      const noPrice = listings.filter(l => !l.price).length;
+      msg.innerHTML = 'Parsed <strong>' + listings.length + '</strong> listings from ' + file.name +
+        (noImg ? ' &middot; ' + noImg + ' without images' : '') +
+        (noPrice ? ' &middot; ' + noPrice + ' without a price' : '');
+      renderBulkPreview(listings);
+    } catch (err) {
+      console.error(err);
+      msg.textContent = 'Could not parse that CSV.';
+    }
+  };
+  fr.readAsText(file);
+}
+
+function renderBulkPreview(list) {
+  const show = list.slice(0, 15);
+  document.getElementById('bulk-count').textContent = 'Preview — ' + list.length + ' listings';
+  document.getElementById('bulk-tbody').innerHTML = show.map(l => `<tr style="border-top:1px solid var(--border)">
+      <td style="padding:6px 10px">${l._img ? `<img src="${escapeHtml(l._img)}" style="width:38px;height:38px;object-fit:cover;border-radius:4px" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'⚠️'}))">` : '<span style="opacity:.4">—</span>'}</td>
+      <td style="padding:6px 10px;max-width:260px">${escapeHtml(l.name)}</td>
+      <td style="padding:6px 10px">${escapeHtml(l.make)}</td>
+      <td style="padding:6px 10px">${escapeHtml(l.model)}</td>
+      <td style="padding:6px 10px">${l.price ? 'R' + l.price.toLocaleString() : '<span style="color:var(--warn)">no price</span>'}</td>
+      <td style="padding:6px 10px">${l.images.length}</td>
+    </tr>`).join('');
+  document.getElementById('bulk-more').textContent =
+    list.length > 15 ? 'Showing first 15 of ' + list.length + '.' : '';
+  document.getElementById('bulk-preview').style.display = 'block';
+  document.getElementById('bulk-prog').style.display = 'none';
+}
+
+function sellerBulkCancel() {
+  bulkRows = [];
+  document.getElementById('bulk-preview').style.display = 'none';
+  document.getElementById('bulk-msg').textContent = '';
+  document.getElementById('bulk-file').value = '';
+}
+
+async function sellerBulkImport() {
+  if (!sellerDbId) { showToast('Please sign in as a seller first.'); return; }
+  if (!bulkRows.length) return;
+  const btn = document.getElementById('bulk-go');
+  btn.disabled = true;
+
+  document.getElementById('bulk-preview').style.display = 'none';
+  document.getElementById('bulk-prog').style.display = 'block';
+
+  const total = bulkRows.length;
+  const CHUNK = 100;
+  let done = 0, failed = 0;
+
+  for (let i = 0; i < total; i += CHUNK) {
+    const batch = bulkRows.slice(i, i + CHUNK).map(l => {
+      const row = { ...l, seller_id: sellerDbId, status: 'pending' };
+      delete row._img;
+      if (!row.sku) row.sku = 'SPF-' + Math.random().toString(36).substring(2,8).toUpperCase();
+      return row;
+    });
+    const { error } = await sb.from('listings').insert(batch);
+    if (error) { failed += batch.length; console.error('Bulk insert failed:', error); }
+    done += batch.length;
+    const pct = Math.round((done / total) * 100);
+    document.getElementById('bulk-bar').style.width = pct + '%';
+    document.getElementById('bulk-prog-text').textContent = done + ' of ' + total + ' processed';
+  }
+
+  const ok = total - failed;
+  document.getElementById('bulk-prog-title').textContent = failed ? 'Finished with errors' : '✅ Uploaded for review';
+  document.getElementById('bulk-bar').style.background = failed ? 'var(--warn)' : 'var(--success)';
+  document.getElementById('bulk-prog-text').textContent =
+    ok + ' listing' + (ok===1?'':'s') + ' submitted for review' + (failed ? ', ' + failed + ' failed' : '') +
+    '. They go live once approved.';
+
+  bulkRows = [];
+  document.getElementById('bulk-file').value = '';
+  btn.disabled = false;
+  await loadSellerData();
+  showToast(ok + ' listings submitted for review ✓');
 }
 
 // ── ADD / EDIT / DELETE LISTINGS ──
@@ -1490,7 +1685,7 @@ function addToCart(p) {
 function renderCart() {
   const el = document.getElementById('cart-items-list');
   if (!cart.length) { el.innerHTML='<div style="text-align:center;padding:2rem;color:var(--text3)">Your cart is empty.</div>'; document.getElementById('cart-summary').innerHTML=''; return; }
-  el.innerHTML = cart.map((item,i) => `<div class="cart-item">${item.product.images?.length?`<img class="cart-thumb" src="${proxyImg(item.product.images[0])}" alt="">`:'<div class="cart-thumb-ph">⚙️</div>'}<div style="flex:1"><div class="cart-name">${item.product.name}</div><div class="cart-meta">${item.product.make} · ${item.product.model} · ${item.product.condition} · Qty: ${item.quantity}</div></div><div class="cart-price">R ${(item.product.price*item.quantity).toLocaleString()}</div><button class="cart-rm" onclick="removeFromCart(${i})">✕</button></div>`).join('');
+  el.innerHTML = cart.map((item,i) => `<div class="cart-item">${item.product.images?.length?`<img class="cart-thumb" src="${item.product.images[0]}" alt="">`:'<div class="cart-thumb-ph">⚙️</div>'}<div style="flex:1"><div class="cart-name">${item.product.name}</div><div class="cart-meta">${item.product.make} · ${item.product.model} · ${item.product.condition} · Qty: ${item.quantity}</div></div><div class="cart-price">R ${(item.product.price*item.quantity).toLocaleString()}</div><button class="cart-rm" onclick="removeFromCart(${i})">✕</button></div>`).join('');
   const sub = cart.reduce((a,i)=>a+i.product.price*i.quantity,0);
   document.getElementById('cart-summary').innerHTML = `<div class="sum-row"><span>Subtotal</span><span>R ${sub.toLocaleString()}</span></div><div class="sum-row"><span>Shipping</span><span style="color:var(--success)">Calculated at checkout</span></div><div class="sum-row total"><span>Total</span><span>R ${sub.toLocaleString()}</span></div>`;
   renderCheckoutSummary();
@@ -1526,30 +1721,15 @@ function openProduct(id) {
   currentProduct = p;
   const s = p.sellers||{business_name:'Verified Seller',operating_hours:'Mon-Fri 08:00–17:00',phone:'27615494504',whatsapp_enabled:true};
   const imgs = p.images||[];
-  document.getElementById('m-img').src = proxyImg(imgs[0]||'');
-  document.getElementById('m-thumbs').innerHTML = imgs.map((img,i)=>`<img class="gal-thumb ${i===0?'active':''}" src="${proxyImg(img)}" onclick="switchImg(this,'${proxyImg(img)}')" alt="">`).join('');
+  document.getElementById('m-img').src = imgs[0]||'';
+  document.getElementById('m-thumbs').innerHTML = imgs.map((img,i)=>`<img class="gal-thumb ${i===0?'active':''}" src="${img}" onclick="switchImg(this,'${img}')" alt="">`).join('');
   const condEl = document.getElementById('m-cond'); condEl.textContent=p.condition; condEl.className='m-cond-badge '+(p.condition==='New'?'cn':p.condition==='Damaged/Salvage'?'cs':'cu');
   document.getElementById('m-cat').textContent = p.category;
   document.getElementById('m-make').textContent = p.make+' · '+p.model;
   document.getElementById('m-name').textContent = p.name;
   document.getElementById('m-price').textContent = 'R '+p.price.toLocaleString();
   document.getElementById('m-price-note').textContent = p.condition==='New'?'New part · Fixed price':p.condition==='Damaged/Salvage'?'Salvage vehicle · Price negotiable':'Used part · Price negotiable';
-  // Clean description: strip HTML tags, fix escaped newlines, render as readable text
-  const rawDesc = (p.description||'');
-  const cleanDesc = rawDesc
-    .replace(/\\n/g, '\n')           // unescape \n
-    .replace(/<br\s*\/?>/gi, '\n')   // <br> to newline
-    .replace(/<\/?(h[1-6]|p|div|li|ul|ol|section|article)[^>]*>/gi, '\n') // block tags to newline
-    .replace(/<[^>]+>/g, '')         // strip all remaining HTML tags
-    .replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&nbsp;/g,' ').replace(/&#?[a-zA-Z0-9]+;/g,'') // decode entities
-    .replace(/\n{2,}/g, '\n')         // collapse multiple newlines to single
-    .trim();
-  const descEl = document.getElementById('m-desc');
-  descEl.style.whiteSpace = 'pre-line';
-  descEl.style.lineHeight = '1.5';
-  descEl.style.maxHeight = '180px';
-  descEl.style.overflowY = 'auto';
-  descEl.textContent = cleanDesc;
+  document.getElementById('m-desc').innerHTML = (p.description||'').replace(/\n/g,'<br>').replace(/\\n/g,'<br>');
   document.getElementById('m-specs').innerHTML = `<div class="spec-item"><div class="spec-lbl">SKU</div><div class="spec-val">${p.sku||'—'}</div></div><div class="spec-item"><div class="spec-lbl">Quantity</div><div class="spec-val">${p.quantity||1}</div></div><div class="spec-item"><div class="spec-lbl">Fits</div><div class="spec-val">${p.year_start||''}–${p.year_end||''}</div></div><div class="spec-item"><div class="spec-lbl">Location</div><div class="spec-val">${p.location||'—'}</div></div>`;
   document.getElementById('m-shipping').innerHTML = (p.shipping_options||[]).map(sh=>`<span class="ship-tag">${sh==='Courier'?'📦':'🏪'} ${sh}</span>`).join('');
   const logo = document.getElementById('m-seller-logo');
@@ -1573,23 +1753,6 @@ function openProduct(id) {
 
 function switchImg(el,src){document.getElementById('m-img').src=src;document.querySelectorAll('.gal-thumb').forEach(t=>t.classList.remove('active'));el.classList.add('active');}
 function toggleEnqForm(){const f=document.getElementById('enq-form');f.style.display=f.style.display==='none'?'block':'none';}
-
-// ══════════════════════════════════════════════════════════════
-//  IMAGE PROXY — route external URLs through Cloudinary fetch
-//  so hotlink-blocking sites don't break card images
-// ══════════════════════════════════════════════════════════════
-function proxyImg(url) {
-  if (!url) return '';
-  // Already on Cloudinary — serve directly
-  if (url.includes('cloudinary.com')) return url;
-  // WordPress media URLs — proxy through Cloudinary fetch so they load fast
-  // and bypass any hotlink issues. WordPress media is publicly accessible.
-  if (url.includes('/wp-content/uploads/')) {
-    return `https://res.cloudinary.com/${CLOUDINARY_CLOUD}/image/fetch/f_auto,q_auto,w_600/${encodeURIComponent(url)}`;
-  }
-  // Everything else — serve directly
-  return url;
-}
 
 // ══════════════════════════════════════════════════════════════
 //  FILTERS & RENDER
@@ -1636,7 +1799,7 @@ function renderParts(data) {
   if(!data.length){grid.innerHTML='<div class="empty-state"><div class="empty-state-icon">🔍</div><h3>No parts found</h3><p style="font-size:12px;color:var(--text3);margin-top:.35rem">Try adjusting your search or filter criteria.</p></div>';return;}
   grid.innerHTML=data.map(p=>`
     <div class="part-card" onclick="openProduct('${p.id}')">
-      ${p.images?.length?`<div style="position:relative"><img class="card-img" src="${proxyImg(p.images[0])}" loading="lazy" alt="${p.name}" onerror="this.parentNode.innerHTML='<div class=\\'card-img-ph\\'style=\\'position:relative\\'><div class=\\'card-img-ph-bg\\'>⚙️</div><span style=\\'font-size:2.8rem;position:relative;z-index:1\\'>⚙️</span><span class=\\'cond-pill ${condClass(p.condition)}\\'>${p.condition}</span></div>'"><span class="cond-pill ${condClass(p.condition)}">${p.condition}</span></div>`:`<div class="card-img-ph" style="position:relative"><div class="card-img-ph-bg">⚙️</div><span style="font-size:2.8rem;position:relative;z-index:1">⚙️</span><span class="cond-pill ${condClass(p.condition)}">${p.condition}</span></div>`}
+      ${p.images?.length?`<div style="position:relative"><img class="card-img" src="${p.images[0]}" loading="lazy" alt="${p.name}"><span class="cond-pill ${condClass(p.condition)}">${p.condition}</span></div>`:`<div class="card-img-ph" style="position:relative"><div class="card-img-ph-bg">⚙️</div><span style="font-size:2.8rem;position:relative;z-index:1">⚙️</span><span class="cond-pill ${condClass(p.condition)}">${p.condition}</span></div>`}
       <div class="card-body">
         <div class="card-make">${p.make} · ${p.model}</div>
         <div class="card-name">${p.name}</div>
@@ -1664,11 +1827,6 @@ function gotoView(view, btn) {
 
 function openDash(btn){if(!user){openAuth();return;}updateDashboard();gotoView('dashboard',btn);}
 function closeOverlay(id,e){if(e.target===document.getElementById(id))document.getElementById(id).classList.remove('open');}
-function toggleUserMenu(){document.getElementById('user-dropdown').classList.toggle('open');}
-function closeUserMenu(){document.getElementById('user-dropdown').classList.remove('open');}
-function toggleMobileMenu(){const m=document.getElementById('mobile-menu'),h=document.getElementById('hamburger');m.classList.toggle('open');h.classList.toggle('open');}
-function closeMobileMenu(){document.getElementById('mobile-menu').classList.remove('open');document.getElementById('hamburger').classList.remove('open');}
-document.addEventListener('click',e=>{const w=document.getElementById('user-menu-wrap');if(w&&!w.contains(e.target))closeUserMenu();});
 
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3200);}
 function showSuccess(icon,title,text){document.getElementById('s-icon').textContent=icon;document.getElementById('s-title').textContent=title;document.getElementById('s-text').textContent=text;document.getElementById('success-overlay').classList.add('show');}
