@@ -1344,25 +1344,52 @@ function handleBulkFile(file) {
   reader.readAsText(file);
 }
 
+// Strip WooCommerce/WP All Export metadata from the images field.
+// Woo writes:  URL ! alt : x ! title : y ! desc : z ! caption : w | URL2 ! alt : ...
+// Without this, that junk lands in Supabase and every <img> 404s.
+function cleanImageField(raw) {
+  if (!raw) return [];
+  return String(raw)
+    .split('|')
+    .map(s => s.replace(/\s*!\s*(alt|title|desc|caption)\s*:.*$/i, ''))
+    .map(s => s.split(',')[0])
+    .map(s => s.trim())
+    .filter(u => /^https?:\/\/\S+\.(jpe?g|png|webp|gif|avif)(\?\S*)?$/i.test(u));
+}
+function makeFromCat(cat) {
+  if (!cat) return '';
+  return cat.split('|')[0].split('>')[0].trim().replace(/-/g, ' ');
+}
+function modelFromCat(cat) {
+  if (!cat || !cat.includes('>')) return '';
+  return cat.split('|')[0].split('>')[1].trim();
+}
+
 function mapWooToSPF(r) {
+  const cat  = r.tax_product_cat || r.category || '';
+  const imgs = cleanImageField(r.images);
   return {
     name: r.post_title || r.name || '',
-    category: mapWooCategory(r.tax_product_cat || r.category || ''),
-    make: extractMake(r.post_title || r.name || '') || 'Other',
-    model: r['attribute_pa_model'] || r.model || 'Various',
-    year_start: parseInt(r['attribute_pa_year'] || r.year_start) || null,
-    year_end: parseInt(r['attribute_pa_year_to'] || r.year_end) || null,
-    condition: mapCondition(r['attribute_pa_condition'] || r.condition || 'Used'),
-    price: parseFloat(r.regular_price || r._regular_price || r.price || 0),
+    category: mapWooCategory(cat),
+    // CSV headers normalise "attribute:Make" -> attribute_make (not attribute_pa_make)
+    make: r.attribute_make || makeFromCat(cat) || extractMake(r.post_title || '') || 'Other',
+    model: r.attribute_model || modelFromCat(cat) || 'Various',
+    year_start: parseInt(r.attribute_year || r.year_start) || null,
+    year_end: parseInt(r.attribute_year_to || r.year_end) || null,
+    condition: mapCondition(r.attribute_condition || r.condition || 'Used'),
+    price: parseFloat(r.regular_price || r._regular_price || r.price || 0) || 0,
     sku: r.sku || '',
     description: r.post_content || r.description || '',
-    location: r['attribute_pa_location'] || r.location || 'Johannesburg',
+    location: r.attribute_location || r.location || 'Johannesburg',
     shipping_options: ['Collection', 'Courier'],
-    images: r.images ? r.images.split('|').map(u=>u.trim()).filter(Boolean) : [],
-    status: 'active',
-    _preview_img: (r.images||'').split('|')[0]?.trim() || ''
+    images: imgs,
+    // outofstock / unpublished rows import as inactive rather than going live
+    status: (r.stock_status === 'outofstock' || (r.post_status && r.post_status !== 'Published'))
+              ? 'inactive' : 'active',
+    _preview_img: imgs[0] || ''
   };
 }
+
 
 function mapSPFCsv(r) {
   const ship = r.shipping || 'Collection';
