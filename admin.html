@@ -314,6 +314,7 @@ textarea{resize:vertical;min-height:80px}
           </div>
         </div>
         <table id="listings-table">
+          <caption style="caption-side:top;text-align:left;padding:0 0 10px"><div id="listing-filter-bar" style="display:flex;gap:6px;flex-wrap:wrap"></div></caption>
           <thead><tr><th>Part Name</th><th>Seller</th><th>Category</th><th>Price</th><th>Status</th><th>Listed</th><th>Actions</th></tr></thead>
           <tbody id="listings-tbody"><tr><td colspan="7" style="text-align:center;padding:1.5rem;color:var(--text3)">Loading listings…</td></tr></tbody>
         </table>
@@ -838,22 +839,69 @@ function renderApplications() {
 // ══════════════════════════════════════════════════════════════
 //  LISTINGS
 // ══════════════════════════════════════════════════════════════
+function esc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+
+let listingFilter = 'all';
+function setListingFilter(f, el) {
+  listingFilter = f;
+  document.querySelectorAll('.lf-btn').forEach(b => b.classList.remove('active'));
+  if (el) el.classList.add('active');
+  renderListings();
+}
+
+async function approveListing(id) {
+  const { error } = await sb.from('listings').update({ status: 'active' }).eq('id', id);
+  if (error) { showToast('Error: ' + error.message); return; }
+  logAudit('Listing Approved', id);
+  await loadAllData();
+  showToast('Listing approved ✓');
+}
+
+async function approveAllPending() {
+  const pend = allListings.filter(l => l.status === 'pending');
+  if (!pend.length) { showToast('Nothing pending.'); return; }
+  if (!confirm('Approve all ' + pend.length + ' pending listings?')) return;
+  const ids = pend.map(l => l.id);
+  for (let i = 0; i < ids.length; i += 200) {
+    const { error } = await sb.from('listings').update({ status: 'active' }).in('id', ids.slice(i, i+200));
+    if (error) { showToast('Error: ' + error.message); return; }
+  }
+  logAudit('Bulk Approve', ids.length + ' listings approved');
+  await loadAllData();
+  showToast(ids.length + ' listings approved ✓');
+}
+
 function renderListings() {
-  document.getElementById('listings-tbody').innerHTML = allListings.length
-    ? allListings.map(l => `<tr>
-        <td class="cell-bold">${l.name}</td>
-        <td style="font-size:12px">${l.sellers?.business_name||'—'}</td>
-        <td style="font-size:12px">${l.category||'—'}</td>
+  const pendCount = allListings.filter(l => l.status === 'pending').length;
+  const bar = document.getElementById('listing-filter-bar');
+  if (bar) {
+    bar.innerHTML =
+      ['all','pending','active','inactive'].map(f =>
+        `<button class="btn lf-btn ${f===listingFilter?'active':''}" onclick="setListingFilter('${f}',this)"
+          style="${f===listingFilter?'background:var(--blue);color:#fff':'background:transparent;border:1px solid var(--border);color:var(--text2)'}">
+          ${f[0].toUpperCase()+f.slice(1)}${f==='pending'&&pendCount?' ('+pendCount+')':''}</button>`).join(' ') +
+      (pendCount ? ` <button class="btn btn-approve" style="margin-left:8px" onclick="approveAllPending()">✓ Approve All Pending (${pendCount})</button>` : '');
+  }
+
+  const rows = listingFilter === 'all' ? allListings : allListings.filter(l => (l.status||'active') === listingFilter);
+
+  document.getElementById('listings-tbody').innerHTML = rows.length
+    ? rows.map(l => `<tr>
+        <td class="cell-bold">${esc(l.name)}</td>
+        <td style="font-size:12px">${esc(l.sellers?.business_name||'—')}</td>
+        <td style="font-size:12px">${esc(l.category||'—')}</td>
         <td class="cell-mono">R ${(l.price||0).toLocaleString()}</td>
-        <td><span class="pill ${l.status==='active'?'pill-active':'pill-suspended'}">${l.status||'active'}</span></td>
+        <td><span class="pill ${l.status==='active'?'pill-active':l.status==='pending'?'pill-pending':'pill-suspended'}">${esc(l.status||'active')}</span></td>
         <td style="font-size:11px;color:var(--text3)">${new Date(l.created_at).toLocaleDateString('en-ZA')}</td>
         <td><div class="act-row">
-          ${l.status==='active'?`<button class="btn btn-suspend" onclick="deactivateListing('${l.id}','${l.name}')">Deactivate</button>`:`<button class="btn btn-activate" onclick="activateListing('${l.id}','${l.name}')">Activate</button>`}
-          <button class="btn btn-delete" onclick="deleteListing('${l.id}','${l.name}')">Delete</button>
+          ${l.status==='pending'?`<button class="btn btn-approve" onclick="approveListing('${l.id}')">Approve</button>`:''}
+          ${l.status==='active'?`<button class="btn btn-suspend" onclick="deactivateListing('${l.id}','${esc(l.name)}')">Deactivate</button>`:l.status!=='pending'?`<button class="btn btn-activate" onclick="activateListing('${l.id}','${esc(l.name)}')">Activate</button>`:''}
+          <button class="btn btn-delete" onclick="deleteListing('${l.id}','${esc(l.name)}')">Delete</button>
         </div></td>
       </tr>`).join('')
     : '<tr><td colspan="7" style="text-align:center;padding:1.5rem;color:var(--text3)">No listings found</td></tr>';
 }
+
 
 // ══════════════════════════════════════════════════════════════
 //  ENQUIRIES

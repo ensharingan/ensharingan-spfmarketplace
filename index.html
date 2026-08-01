@@ -1111,6 +1111,39 @@ async function doRegister() {
   showSuccess('🎉', 'Welcome to SPF Marketplace!', role === 'seller' ? 'Account created! Check your email to verify, then sign in to access your seller dashboard.' : 'Account created! You can now browse and enquire on parts across South Africa.');
 }
 
+// These two were called on every sign-in/sign-out but never defined, so onAuth()
+// threw a ReferenceError and the UI never updated after a successful login.
+function showLoggedInNav(supaUser) {
+  const label = (supaUser?.email || 'Account').split('@')[0];
+  const btn = document.getElementById('auth-btn');
+  if (btn) {
+    btn.textContent = label.length > 14 ? label.slice(0,14) + '…' : label;
+    btn.title = supaUser?.email || '';
+    btn.onclick = doLogout;
+  }
+  const mAuth = document.getElementById('mobile-auth-btn');
+  const mOut  = document.getElementById('mobile-signout-btn');
+  if (mAuth) mAuth.style.display = 'none';
+  if (mOut)  mOut.style.display  = 'block';
+}
+
+function showLoggedOutNav() {
+  const btn = document.getElementById('auth-btn');
+  if (btn) {
+    btn.textContent = 'Sign In';
+    btn.title = '';
+    btn.onclick = openAuth;
+  }
+  const mAuth = document.getElementById('mobile-auth-btn');
+  const mOut  = document.getElementById('mobile-signout-btn');
+  if (mAuth) mAuth.style.display = 'block';
+  if (mOut)  mOut.style.display  = 'none';
+  const dash = document.getElementById('nav-tab-dash');
+  if (dash) dash.style.display = 'none';
+  const mdb = document.getElementById('mobile-dash-btn');
+  if (mdb) mdb.style.display = 'none';
+}
+
 async function onAuth(supaUser, role) {
   user = { id: supaUser.id, email: supaUser.email, role };
   showLoggedInNav(supaUser);
