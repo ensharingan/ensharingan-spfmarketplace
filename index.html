@@ -200,6 +200,31 @@ nav{background:var(--blue);padding:0 1.5rem;display:flex;align-items:center;gap:
 .sell-band a:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
 .sell-band img{width:100%;height:auto;display:block}
 @media(max-width:700px){.sell-band{padding:1rem 1rem 0}}
+/* ══ SHOPS ══ */
+.shop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.shop-card{background:#fff;border:1.5px solid var(--border);border-radius:var(--rl);padding:1.1rem;cursor:pointer;text-align:left;transition:border-color .14s,transform .14s,box-shadow .14s}
+.shop-card:hover{border-color:var(--blue);transform:translateY(-2px);box-shadow:var(--shadow)}
+.shop-top{display:flex;align-items:center;gap:11px;margin-bottom:.7rem}
+.shop-av{width:46px;height:46px;border-radius:var(--r);background:var(--blue-dim);border:1.5px solid var(--blue-mid);display:flex;align-items:center;justify-content:center;font-family:var(--font-h);font-weight:800;font-size:15px;color:var(--blue);flex-shrink:0;overflow:hidden}
+.shop-av img{width:100%;height:100%;object-fit:cover}
+.shop-nm{font-family:var(--font-h);font-size:16px;font-weight:800;text-transform:uppercase;color:var(--text);line-height:1.15}
+.shop-loc{font-size:11.5px;color:var(--text3);margin-top:2px}
+.shop-stat{font-size:12px;color:var(--text2)}
+.shop-stat b{color:var(--blue);font-weight:700}
+.shop-vf{display:inline-flex;align-items:center;gap:4px;background:var(--green-dim,#e8f6ee);color:#1b7a43;border-radius:20px;padding:2px 9px;font-family:var(--font-h);font-size:9.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-top:6px}
+.shop-hero{background:var(--blue);border-radius:var(--rl);padding:1.5rem;color:#fff;margin-bottom:1.2rem;position:relative;overflow:hidden}
+.shop-hero-in{display:flex;align-items:center;gap:16px;flex-wrap:wrap;position:relative;z-index:1}
+.shop-hero-av{width:74px;height:74px;border-radius:var(--rl);background:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--font-h);font-weight:900;font-size:24px;color:var(--blue);flex-shrink:0;overflow:hidden}
+.shop-hero-av img{width:100%;height:100%;object-fit:cover}
+.shop-hero-nm{font-family:var(--font-h);font-size:26px;font-weight:900;text-transform:uppercase;line-height:1.05}
+.shop-hero-meta{font-size:12.5px;color:rgba(255,255,255,.78);margin-top:4px}
+.shop-hero-about{font-size:13px;color:rgba(255,255,255,.85);margin-top:.85rem;line-height:1.55;max-width:640px;position:relative;z-index:1}
+.shop-hero-acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:1rem;position:relative;z-index:1}
+.shop-btn{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.28);border-radius:var(--r);padding:8px 15px;font-family:var(--font-h);font-size:12px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:#fff;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.shop-btn:hover{background:rgba(255,255,255,.24)}
+.shop-btn.wa{background:#25d366;border-color:#25d366}
+.shop-link{background:none;border:none;padding:0;font:inherit;color:var(--blue);cursor:pointer;font-weight:600;text-decoration:underline}
+.priv-tag{display:inline-flex;align-items:center;gap:4px;background:var(--bg2);border:1px solid var(--border2);color:var(--text2);border-radius:20px;padding:2px 9px;font-family:var(--font-h);font-size:9.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
 .bw-hd{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:1rem}
 .bw-ttl{font-family:var(--font-h);font-size:20px;font-weight:900;text-transform:uppercase;letter-spacing:.01em;color:var(--text);line-height:1.1}
 .bw-sub{font-size:12.5px;color:var(--text2);margin-top:2px}
@@ -490,6 +515,7 @@ footer{background:var(--blue3);padding:2rem 1.5rem 1.25rem;margin-top:3rem}
   <div class="nav-divider"></div>
   <div class="nav-tabs">
     <button class="nav-tab active" onclick="gotoView('browse',this)">Browse Parts</button>
+    <button class="nav-tab" onclick="gotoView('shops',this)">Shops</button>
     <button class="nav-tab" onclick="gotoView('list',this)">List a Part</button>
     <button class="nav-tab" onclick="gotoView('contact',this)">Find a Part</button>
     <button class="nav-tab" id="nav-tab-dash" onclick="openDash(this)" style="display:none">My Dashboard</button>
@@ -688,6 +714,29 @@ footer{background:var(--blue3);padding:2rem 1.5rem 1.25rem;margin-top:3rem}
 </div>
 
 <!-- LIST A PART VIEW -->
+<div id="view-shops" class="view">
+  <div style="max-width:1200px;margin:0 auto">
+    <div class="bw-hd">
+      <div>
+        <div class="bw-ttl">Browse by shop</div>
+        <div class="bw-sub" id="shops-sub">Verified businesses selling on the marketplace.</div>
+      </div>
+    </div>
+    <div class="shop-grid" id="shops-grid"></div>
+  </div>
+</div>
+
+<div id="view-shop" class="view">
+  <div style="max-width:1200px;margin:0 auto">
+    <button class="crumb-back" style="margin-bottom:.85rem" onclick="gotoView('shops',null)">← All shops</button>
+    <div id="shop-detail"></div>
+    <div class="grid-header" style="margin-top:1.2rem">
+      <div class="grid-count"><span id="shop-count">0</span> parts from this shop</div>
+    </div>
+    <div class="parts-grid" id="shop-parts"></div>
+  </div>
+</div>
+
 <div id="view-list" class="view">
   <div style="max-width:720px;margin:0 auto">
     <div class="card">
@@ -1172,7 +1221,14 @@ footer{background:var(--blue3);padding:2rem 1.5rem 1.25rem;margin-top:3rem}
         <div class="form-row"><label>Password *</label><input type="password" id="reg-pass" placeholder="Min 8 characters"></div>
         <div class="form-row"><label>Business Name (Sellers only)</label><input type="text" id="reg-biz" placeholder="Your business name"></div>
         <div class="form-row"><label>I am a</label>
-          <select id="reg-role"><option value="buyer">Buyer — I want to find parts</option><option value="seller">Seller — I want to list parts</option></select>
+          <select id="reg-role" onchange="toggleSellerType()"><option value="buyer">Buyer — I want to find parts</option><option value="seller">Seller — I want to list parts</option></select>
+        </div>
+        <div class="form-row" id="reg-type-row" style="display:none"><label>Selling as</label>
+          <select id="reg-seller-type">
+            <option value="business">A business — I run a parts shop or scrapyard</option>
+            <option value="private">A private seller — clearing out my own parts</option>
+          </select>
+          <div style="font-size:11.5px;color:var(--text3);margin-top:5px;line-height:1.5">Businesses get a public shop page buyers can browse. Private sellers list parts without a shop profile.</div>
         </div>
         <button class="btn-primary" id="reg-btn" onclick="doRegister()">Create Account →</button>
       </div>
@@ -1264,7 +1320,10 @@ async function doRegister() {
   setBtnLoad('reg-btn', false, 'Create Account →');
   if (error) { showToast('Registration failed: ' + error.message); return; }
   if (role === 'seller' && data.user) {
-    await sb.from('sellers').insert({ user_id: data.user.id, business_name: biz || name + ' Spares', contact_person: name, email, phone: document.getElementById('reg-phone').value || '', status: 'approved' });
+    const sellerType = document.getElementById('reg-seller-type')?.value || 'business';
+    const bizName = biz || (sellerType==='private' ? name : name + ' Spares');
+    const slug = bizName.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'') + '-' + Math.random().toString(36).slice(2,6);
+    await sb.from('sellers').insert({ user_id: data.user.id, business_name: bizName, contact_person: name, email, phone: document.getElementById('reg-phone').value || '', status: 'approved', seller_type: sellerType, slug });
   }
   document.getElementById('modal-auth').classList.remove('open');
   showSuccess('🎉', 'Welcome to SPF Marketplace!', role === 'seller' ? 'Account created! Check your email to verify, then sign in to access your seller dashboard.' : 'Account created! You can now browse and enquire on parts across South Africa.');
@@ -1358,7 +1417,7 @@ async function loadListings() {
   let all = [], error = null;
   for (let from = 0; ; from += PAGE) {
     const res = await sb.from('listings')
-      .select('*, sellers(business_name,phone,whatsapp_enabled,operating_hours,logo_url)')
+      .select('*, sellers(id,business_name,phone,whatsapp_enabled,operating_hours,logo_url,seller_type,slug,about,city,website,status)')
       .eq('status', 'active')
       .order('created_at', { ascending: false })
       .range(from, from + PAGE - 1);
@@ -2018,8 +2077,18 @@ function openProduct(id) {
   document.getElementById('m-shipping').innerHTML = (p.shipping_options||[]).map(sh=>`<span class="ship-tag">${sh==='Courier'?'📦':'🏪'} ${sh}</span>`).join('');
   const logo = document.getElementById('m-seller-logo');
   logo.innerHTML = s.logo_url ? `<img src="${s.logo_url}" alt="">` : (s.business_name||'VS').substring(0,2).toUpperCase();
-  document.getElementById('m-seller-name').textContent = s.business_name||'Verified Seller';
-  document.getElementById('m-seller-hours').textContent = s.operating_hours||'';
+  const nmEl=document.getElementById('m-seller-name');
+  const esc2=(typeof escapeHtml==='function')?escapeHtml:(x=>String(x==null?'':x));
+  if(isBusiness(s)){
+    // Businesses get a public shop page; private sellers stay anonymous.
+    const key=esc2(s.slug||s.id).replace(/'/g,"\\'");
+    nmEl.innerHTML='<button class="shop-link" onclick="document.getElementById(\'modal-product\').classList.remove(\'open\');openShop(\''+key+'\')">'
+                 + esc2(s.business_name||'Verified Seller')+' →</button>';
+    document.getElementById('m-seller-hours').textContent = s.operating_hours||'';
+  }else{
+    nmEl.textContent = s.business_name||'Private seller';
+    document.getElementById('m-seller-hours').innerHTML='<span class="priv-tag">Private seller</span>';
+  }
   document.getElementById('m-stars').textContent = '★★★★★';
   const waBtn = document.getElementById('m-wa');
   if (s.whatsapp_enabled) {
@@ -2042,6 +2111,80 @@ function toggleEnqForm(){const f=document.getElementById('enq-form');f.style.dis
 //  FILTERS & RENDER
 // ══════════════════════════════════════════════════════════════
 function condClass(c){return c==='New'?'cn':c==='Damaged/Salvage'?'cs':'cu';}
+
+// ══════════════════════════════════════════════════════════════
+//  SHOPS — business sellers get a public profile; private sellers don't
+// ══════════════════════════════════════════════════════════════
+function isBusiness(sel){ return !!sel && (sel.seller_type||'business')==='business'; }
+
+function shopIndex(){
+  const map={};
+  if(typeof PARTS==='undefined') return [];
+  PARTS.forEach(p=>{
+    const sel=p.sellers; if(!sel||!isBusiness(sel)) return;
+    const key=sel.id||sel.slug||sel.business_name; if(!key) return;
+    if(!map[key]) map[key]={sel, n:0};
+    map[key].n++;
+  });
+  return Object.values(map).sort((a,b)=> b.n-a.n || String(a.sel.business_name).localeCompare(b.sel.business_name));
+}
+
+function renderShops(){
+  const grid=document.getElementById('shops-grid'); if(!grid) return;
+  const esc=(typeof escapeHtml==='function')?escapeHtml:(x=>String(x==null?'':x));
+  const shops=shopIndex();
+  const sub=document.getElementById('shops-sub');
+  if(sub) sub.textContent = shops.length
+    ? shops.length+(shops.length===1?' verified business':' verified businesses')+' selling on the marketplace.'
+    : 'No shops listed yet.';
+  if(!shops.length){ grid.innerHTML='<div class="empty-state"><div class="empty-state-icon">🏪</div><h3>No shops yet</h3></div>'; return; }
+  grid.innerHTML = shops.map(({sel,n})=>{
+    const init=String(sel.business_name||'?').replace(/[^A-Za-z]/g,'').slice(0,2).toUpperCase();
+    const key=esc(sel.slug||sel.id).replace(/'/g,"\\'");
+    return '<button class="shop-card" onclick="openShop(\''+key+'\')">'
+      + '<div class="shop-top">'
+      +   '<div class="shop-av">'+(sel.logo_url?'<img src="'+esc(sel.logo_url)+'" alt="">':esc(init))+'</div>'
+      +   '<div><div class="shop-nm">'+esc(sel.business_name)+'</div>'
+      +   (sel.city?'<div class="shop-loc">📍 '+esc(sel.city)+'</div>':'')+'</div>'
+      + '</div>'
+      + '<div class="shop-stat"><b>'+n.toLocaleString()+'</b> parts in stock</div>'
+      + (sel.status==='approved'?'<span class="shop-vf">✓ Verified seller</span>':'')
+      + '</button>';
+  }).join('');
+}
+
+function openShop(key){
+  const hit=shopIndex().find(x=> String(x.sel.slug)===String(key) || String(x.sel.id)===String(key));
+  const det=document.getElementById('shop-detail');
+  const grid=document.getElementById('shop-parts');
+  const cnt=document.getElementById('shop-count');
+  gotoView('shop',null);
+  if(!hit||!det){ if(det) det.innerHTML='<div class="empty-state"><h3>Shop not found</h3></div>'; return; }
+  const esc=(typeof escapeHtml==='function')?escapeHtml:(x=>String(x==null?'':x));
+  const s2=hit.sel;
+  const init=String(s2.business_name||'?').replace(/[^A-Za-z]/g,'').slice(0,2).toUpperCase();
+  const wa=(s2.phone||'').replace(/\D/g,'');
+  det.innerHTML='<div class="shop-hero"><div class="shop-hero-in">'
+    + '<div class="shop-hero-av">'+(s2.logo_url?'<img src="'+esc(s2.logo_url)+'" alt="">':esc(init))+'</div>'
+    + '<div><div class="shop-hero-nm">'+esc(s2.business_name)+'</div>'
+    +   '<div class="shop-hero-meta">'
+    +     (s2.status==='approved'?'✓ Verified seller':'')
+    +     (s2.city?' · 📍 '+esc(s2.city):'')
+    +     (s2.operating_hours?' · 🕒 '+esc(s2.operating_hours):'')
+    +   '</div></div></div>'
+    + (s2.about?'<div class="shop-hero-about">'+esc(s2.about)+'</div>':'')
+    + '<div class="shop-hero-acts">'
+    +   (s2.whatsapp_enabled&&wa?'<a class="shop-btn wa" target="_blank" rel="noopener" href="https://wa.me/'+wa+'">💬 WhatsApp</a>':'')
+    +   (s2.phone?'<a class="shop-btn" href="tel:'+esc(s2.phone)+'">📞 Call</a>':'')
+    +   (s2.website?'<a class="shop-btn" target="_blank" rel="noopener" href="'+esc(s2.website)+'">🌐 Website</a>':'')
+    + '</div></div>';
+  const mine=PARTS.filter(p=>p.sellers && (p.sellers.id===s2.id));
+  if(cnt) cnt.textContent=mine.length;
+  if(grid) grid.innerHTML = mine.length
+    ? mine.map(p=>partCardHTML(p)).join('')
+    : '<div class="empty-state"><div class="empty-state-icon">⚙️</div><h3>No parts listed yet</h3></div>';
+  if(typeof gtag==='function') gtag('event','shop_view',{shop:s2.business_name||''});
+}
 
 // ══════════════════════════════════════════════════════════════
 //  BRAND WALL — the default landing view
@@ -2080,6 +2223,12 @@ function renderBrandWall(){
   }).join('')
   + (all.length>BW_INITIAL ? '<button class="bw-more" onclick="toggleBrandWall()">'
       + (bwExpanded ? 'Show fewer brands' : 'Show all '+all.length+' brands') + '</button>' : '');
+}
+
+function toggleSellerType(){
+  const isSeller=document.getElementById('reg-role')?.value==='seller';
+  const row=document.getElementById('reg-type-row');
+  if(row) row.style.display = isSeller ? 'block' : 'none';
 }
 
 function toggleBrandWall(){ bwExpanded=!bwExpanded; renderBrandWall(); }
@@ -2557,11 +2706,7 @@ function resetFilters(){
 
 function sortResults(v){const s=[...filtered];if(v==='price-low')s.sort((a,b)=>a.price-b.price);else if(v==='price-high')s.sort((a,b)=>b.price-a.price);renderParts(s);}
 
-function renderParts(data) {
-  const grid=document.getElementById('parts-grid');
-  document.getElementById('results-num').textContent=data.length;
-  if(!data.length){grid.innerHTML='<div class="empty-state"><div class="empty-state-icon">🔍</div><h3>No parts found</h3><p style="font-size:12px;color:var(--text3);margin-top:.35rem">Try adjusting your search or filter criteria.</p></div>';return;}
-  grid.innerHTML=data.map(p=>`
+function partCardHTML(p){ return `
     <div class="part-card" onclick="openProduct('${p.id}')">
       ${p.images?.length?`<div style="position:relative"><img class="card-img" src="${p.images[0]}" loading="lazy" alt="${p.name}"><span class="cond-pill ${condClass(p.condition)}">${p.condition}</span></div>`:`<div class="card-img-ph" style="position:relative"><div class="card-img-ph-bg">⚙️</div><span style="font-size:2.8rem;position:relative;z-index:1">⚙️</span><span class="cond-pill ${condClass(p.condition)}">${p.condition}</span></div>`}
       <div class="card-body">
@@ -2573,7 +2718,13 @@ function renderParts(data) {
           <div class="card-loc"><div class="loc-dot"></div>${(p.location||'').split(',')[0]}</div>
         </div>
       </div>
-    </div>`).join('');
+    </div>`; }
+
+function renderParts(data) {
+  const grid=document.getElementById('parts-grid');
+  document.getElementById('results-num').textContent=data.length;
+  if(!data.length){grid.innerHTML='<div class="empty-state"><div class="empty-state-icon">🔍</div><h3>No parts found</h3><p style="font-size:12px;color:var(--text3);margin-top:.35rem">Try adjusting your search or filter criteria.</p></div>';return;}
+  grid.innerHTML=data.map(p=>partCardHTML(p)).join('');
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -2586,6 +2737,7 @@ function gotoView(view, btn) {
   if(btn)btn.classList.add('active');
   window.scrollTo({top:0,behavior:'smooth'});
   if(view==='cart')renderCart();
+  if(view==='shops')renderShops();
   if(view==='dashboard'){updateDashboard();switchPanel('overview',document.querySelectorAll('.dnav-item')[0]);}
 }
 
