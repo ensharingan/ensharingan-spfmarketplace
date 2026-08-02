@@ -568,6 +568,52 @@ textarea{resize:vertical;min-height:80px}
 </div>
 
 
+<!-- ── EDIT SELLER MODAL ── -->
+<div class="overlay" id="edit-seller-modal" onclick="if(event.target===this)closeEditSeller()">
+  <div class="modal" style="max-width:620px;max-height:88vh;display:flex;flex-direction:column">
+    <div class="modal-hd">
+      <span class="modal-title">Edit Seller</span>
+      <button class="modal-close" onclick="closeEditSeller()">&#10005;</button>
+    </div>
+    <div class="modal-body" style="overflow-y:auto;flex:1">
+      <input type="hidden" id="es-id">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label>Business Name *</label><input type="text" id="es-biz"></div>
+        <div><label>Contact Person</label><input type="text" id="es-contact"></div>
+        <div><label>Email</label><input type="email" id="es-email"></div>
+        <div><label>Phone / WhatsApp</label><input type="tel" id="es-phone"></div>
+        <div><label>City / Town</label><input type="text" id="es-city" placeholder="Randburg"></div>
+        <div><label>Operating Hours</label><input type="text" id="es-hours" placeholder="Mon-Fri 08:00 - 17:00"></div>
+        <div><label>Seller Type</label>
+          <select id="es-type">
+            <option value="business">Business — gets a public shop page</option>
+            <option value="private">Private seller — no shop page</option>
+          </select>
+        </div>
+        <div><label>Account Status</label>
+          <select id="es-status">
+            <option value="approved">Approved</option><option value="pending">Pending</option>
+            <option value="suspended">Suspended</option><option value="banned">Banned</option>
+          </select>
+        </div>
+        <div><label>Subscription</label>
+          <select id="es-sub"><option value="trial">Trial</option><option value="paid">Paid</option><option value="unpaid">Unpaid</option></select>
+        </div>
+        <div><label>Shop Link (slug)</label><input type="text" id="es-slug" placeholder="my-auto-parts"></div>
+      </div>
+      <div style="margin-top:8px"><label>Website</label><input type="text" id="es-website" placeholder="https://example.co.za"></div>
+      <div style="margin-top:8px"><label>Logo Image URL</label><input type="text" id="es-logo" placeholder="https://res.cloudinary.com/.../logo.png"></div>
+      <div style="margin-top:8px"><label>Business Address</label><input type="text" id="es-address" placeholder="Street, suburb, city"></div>
+      <div style="margin-top:8px"><label>About the Shop</label><textarea id="es-about" rows="3" maxlength="400" placeholder="What they specialise in."></textarea></div>
+      <div id="es-warn" style="display:none;margin-top:10px;background:#fff8e6;border:1px solid #ffe0a3;color:#8a5a00;font-size:12px;padding:.6rem .8rem;border-radius:6px;line-height:1.5"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeEditSeller()">Cancel</button>
+      <button class="btn btn-primary" id="es-save-btn" onclick="saveSellerEdits()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── REGISTER SELLER MODAL ── -->
 <div class="overlay" id="register-seller-modal" onclick="if(event.target===this)closeRegisterModal()">
   <div class="modal" style="max-width:520px">
@@ -778,6 +824,94 @@ function renderDashboard() {
 // ══════════════════════════════════════════════════════════════
 //  SELLERS TABLE
 // ══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
+//  EDIT SELLER
+// ══════════════════════════════════════════════════════════════
+function openEditSeller(id) {
+  const s = allSellers.find(x => String(x.id) === String(id));
+  if (!s) { showToast('Seller not found.'); return; }
+  const v = (el, val) => { const e = document.getElementById(el); if (e) e.value = val == null ? '' : val; };
+  v('es-id', s.id);
+  v('es-biz', s.business_name);
+  v('es-contact', s.contact_person);
+  v('es-email', s.email);
+  v('es-phone', s.phone);
+  v('es-city', s.city || (s.address && s.address.city) || '');
+  v('es-hours', s.operating_hours);
+  v('es-type', s.seller_type || 'business');
+  v('es-status', s.status || 'pending');
+  v('es-sub', s.sub_status || 'trial');
+  v('es-slug', s.slug);
+  v('es-website', s.website);
+  v('es-logo', s.logo_url);
+  v('es-address', (s.address && s.address.street) || s.address_text || '');
+  v('es-about', s.about);
+  const w = document.getElementById('es-warn');
+  if (w) { w.style.display = 'none'; w.textContent = ''; }
+  document.getElementById('edit-seller-modal').classList.add('open');
+}
+
+function closeEditSeller() {
+  document.getElementById('edit-seller-modal').classList.remove('open');
+}
+
+async function saveSellerEdits() {
+  const id = document.getElementById('es-id').value;
+  const g = el => (document.getElementById(el)?.value || '').trim();
+  const biz = g('es-biz');
+  if (!biz) { showToast('Business name is required.'); return; }
+
+  const slug = (g('es-slug') || biz).toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
+
+  const prev = allSellers.find(x => String(x.id) === String(id)) || {};
+  const upd = {
+    business_name: biz,
+    contact_person: g('es-contact') || null,
+    email: g('es-email') || null,
+    phone: g('es-phone') || null,
+    city: g('es-city') || null,
+    operating_hours: g('es-hours') || null,
+    seller_type: g('es-type') || 'business',
+    status: g('es-status'),
+    sub_status: g('es-sub'),
+    slug: slug || null,
+    website: g('es-website') || null,
+    logo_url: g('es-logo') || null,
+    about: g('es-about') || null,
+    address: { ...(prev.address || {}), city: g('es-city') || null, street: g('es-address') || null }
+  };
+
+  const btn = document.getElementById('es-save-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+
+  const { error } = await sb.from('sellers').update(upd).eq('id', id);
+
+  if (btn) { btn.disabled = false; btn.textContent = 'Save Changes'; }
+
+  if (error) {
+    const w = document.getElementById('es-warn');
+    const dup = /duplicate|unique/i.test(error.message || '');
+    if (w) {
+      w.textContent = dup
+        ? 'That shop link is already used by another seller. Try a different one.'
+        : 'Could not save: ' + error.message;
+      w.style.display = 'block';
+    }
+    return;
+  }
+
+  // Suspending or banning a seller should take their listings down with them.
+  if (upd.status !== prev.status && (upd.status === 'suspended' || upd.status === 'banned')) {
+    await sb.from('listings').update({ status: 'inactive' }).eq('seller_id', id);
+  }
+
+  logAudit('Edit Seller', biz + ' (' + id + ')');
+  closeEditSeller();
+  await loadAllData();
+  showToast('Seller updated ✓', 'success');
+}
+
 function renderSellers() {
   document.getElementById('sellers-tbody').innerHTML = allSellers.map(s => {
     const daysLeft = s.sub_paid_until ? Math.ceil((new Date(s.sub_paid_until)-Date.now())/86400000) : 0;
@@ -791,6 +925,7 @@ function renderSellers() {
       <td style="text-align:center">${s.listing_count||0}</td>
       <td style="font-size:11px;color:var(--text3)">${new Date(s.created_at).toLocaleDateString('en-ZA')}</td>
       <td><div class="act-row">
+        <button class="btn" onclick="openEditSeller('${s.id}')">Edit</button>
         ${s.status==='pending'?`<button class="btn btn-approve" onclick="approveSeller('${s.id}','${s.business_name}')">Approve</button>`:''}
         ${s.status==='approved'?`<button class="btn btn-suspend" onclick="suspendSeller('${s.id}','${s.business_name}')">Suspend</button>`:''}
         ${s.status==='suspended'?`<button class="btn btn-activate" onclick="activateSeller('${s.id}','${s.business_name}')">Activate</button>`:''}
