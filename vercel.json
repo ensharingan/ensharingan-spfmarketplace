@@ -2,6 +2,19 @@
   "rewrites": [
     { "source": "/admin", "destination": "/admin.html" },
     { "source": "/admin.html", "destination": "/admin.html" },
-    { "source": "/((?!admin\\.html).*)", "destination": "/index.html" }
+    { "source": "/((?!admin\\.html$|.*\\.(?:js|json|css|png|jpg|jpeg|gif|svg|webp|ico|txt|xml|woff2?|map)$).*)", "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/vehicles.js",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=604800, stale-while-revalidate=86400" },
+        { "key": "Content-Type", "value": "application/javascript; charset=utf-8" }
+      ]
+    },
+    {
+      "source": "/sw.js",
+      "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+    }
   ]
 }

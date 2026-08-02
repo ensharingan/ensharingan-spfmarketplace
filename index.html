@@ -16,6 +16,7 @@
 <meta name="description" content="South Africa's trusted auto spare parts marketplace. Buy and sell new, used and salvage vehicle parts from verified local sellers.">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script defer src="/vehicles.js"></script>
 <style>
 /* ══ TOKENS ══ */
 :root{
@@ -853,9 +854,20 @@ footer{background:var(--blue3);padding:2rem 1.5rem 1.25rem;margin-top:3rem}
                 <select id="ap-cat"><option>Engine &amp; Components</option><option>Body Parts</option><option>Headlights &amp; Lighting</option><option>Stripping for Parts</option><option>Damaged Vehicles (Salvage)</option><option>Electrical Systems</option><option>Suspension &amp; Steering</option><option>Transmission</option><option>Interior</option><option>Wheels &amp; Tyres</option><option>Other</option></select>
               </div>
               <div class="form-row"><label>Vehicle Make *</label><select id="ap-make" onchange="updateApModel()"><option value="">Select Make</option></select></div>
-              <div class="form-row"><label>Vehicle Model *</label><select id="ap-model"><option value="">Select Make First</option></select></div>
+              <div class="form-row"><label>Vehicle Model *</label>
+                <input type="text" id="ap-model" list="dl-ap-model" autocomplete="off" placeholder="Select make first" oninput="onApModelPick()" onchange="onApModelPick()">
+                <datalist id="dl-ap-model"></datalist></div>
               <div class="form-row"><label>Year From</label><input type="number" id="ap-yfrom" placeholder="2010" min="1980" max="2026"></div>
               <div class="form-row"><label>Year To</label><input type="number" id="ap-yto" placeholder="2022" min="1980" max="2026"></div>
+              <div class="form-row"><label>Body / Chassis Code <span style="color:var(--text3);font-weight:400">(optional)</span></label>
+                <input type="text" id="ap-body" list="dl-ap-body" autocomplete="off" placeholder="e.g. W204, E90, 6R">
+                <datalist id="dl-ap-body"></datalist></div>
+              <div class="form-row"><label>Engine Code <span style="color:var(--text3);font-weight:400">(optional)</span></label>
+                <input type="text" id="ap-engine" list="dl-ap-engine" autocomplete="off" placeholder="e.g. GW4D20, N47D20A">
+                <datalist id="dl-ap-engine"></datalist></div>
+              <div class="form-row"><label>Variant <span style="color:var(--text3);font-weight:400">(optional)</span></label>
+                <input type="text" id="ap-variant" list="dl-ap-variant" autocomplete="off" placeholder="e.g. STEED 5 TCi">
+                <datalist id="dl-ap-variant"></datalist></div>
               <div class="form-row"><label>Condition *</label><select id="ap-cond"><option>New</option><option>Used</option><option>Damaged/Salvage</option></select></div>
               <div class="form-row"><label>SKU / Part Number</label><input type="text" id="ap-sku" placeholder="e.g. 04479-02250"></div>
               <div class="form-row"><label>Price (ZAR) *</label><input type="number" id="ap-price" placeholder="0.00"></div>
@@ -863,6 +875,7 @@ footer{background:var(--blue3);padding:2rem 1.5rem 1.25rem;margin-top:3rem}
               <div class="form-row"><label>Location</label><select id="ap-loc"><option>Johannesburg</option><option>Pretoria</option><option>Cape Town</option><option>Durban</option><option>Port Elizabeth</option><option>Bloemfontein</option><option>Other</option></select></div>
               <div class="form-row"><label>Shipping</label><select id="ap-ship"><option value="Collection">Collection Only</option><option value="Courier">Courier Available</option><option value="Both">Collection &amp; Courier</option></select></div>
             </div>
+            <div id="ap-fit-hint" style="display:none;font-size:11.5px;color:var(--text3);background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:.55rem .75rem;margin-bottom:.9rem;line-height:1.5"></div>
             <div class="form-row"><label>Description</label><textarea id="ap-desc" rows="3" placeholder="Condition, fitment notes, mileage (if used), any defects…"></textarea></div>
             <div class="form-row">
               <label>Part Photos</label>
@@ -1715,10 +1728,66 @@ async function sellerBulkImport() {
 }
 
 // ── ADD / EDIT / DELETE LISTINGS ──
+// ── Fitment database helpers (window.VEHICLE_DB from vehicles.js) ──
+function vehDB(){ return window.VEHICLE_DB || null; }
+function vehModels(make){
+  const db=vehDB();
+  if(db && db[make]) return Object.keys(db[make]);
+  return (typeof SA_VEHICLE_DATA!=='undefined' && SA_VEHICLE_DATA[make]) ? SA_VEHICLE_DATA[make] : [];
+}
+function vehInfo(make,model){
+  const db=vehDB(); if(!db||!db[make]) return null;
+  if(db[make][model]) return db[make][model];
+  const k=Object.keys(db[make]).find(x=>x.toLowerCase()===String(model||'').trim().toLowerCase());
+  return k?db[make][k]:null;
+}
+function fillDatalist(id,vals){
+  const dl=document.getElementById(id); if(!dl) return;
+  dl.innerHTML=(vals||[]).map(v=>'<option value="'+String(v).replace(/"/g,'&quot;')+'">').join('');
+}
+
 function updateApModel() {
-  const make = document.getElementById('ap-make').value, sel = document.getElementById('ap-model');
-  sel.innerHTML = '<option value="">All Models</option>';
-  if (make && SA_VEHICLE_DATA[make]) SA_VEHICLE_DATA[make].forEach(m => { const o=document.createElement('option');o.value=m;o.textContent=m;sel.appendChild(o); });
+  const make = document.getElementById('ap-make').value;
+  const inp  = document.getElementById('ap-model');
+  const models = vehModels(make);
+  fillDatalist('dl-ap-model', models);
+  if(inp){
+    inp.value='';
+    inp.placeholder = make ? (models.length+' models — type to search') : 'Select make first';
+  }
+  ['dl-ap-body','dl-ap-engine','dl-ap-variant'].forEach(d=>fillDatalist(d,[]));
+  ['ap-body','ap-engine','ap-variant'].forEach(i=>{const e=document.getElementById(i);if(e)e.value='';});
+  const h=document.getElementById('ap-fit-hint'); if(h) h.style.display='none';
+}
+
+// When a model is chosen, offer its real body/engine codes and prefill the year range.
+function onApModelPick(){
+  const make=document.getElementById('ap-make').value;
+  const model=document.getElementById('ap-model').value;
+  const info=vehInfo(make,model);
+  const hint=document.getElementById('ap-fit-hint');
+  if(!info){
+    ['dl-ap-body','dl-ap-engine','dl-ap-variant'].forEach(d=>fillDatalist(d,[]));
+    if(hint) hint.style.display='none';
+    return;
+  }
+  fillDatalist('dl-ap-body',   info.b||[]);
+  fillDatalist('dl-ap-engine', info.e||[]);
+  fillDatalist('dl-ap-variant',info.v||[]);
+  // prefill years only if the seller has not typed their own
+  const yf=document.getElementById('ap-yfrom'), yt=document.getElementById('ap-yto');
+  if(info.y){
+    if(yf && !yf.value) yf.value=info.y[0];
+    if(yt && !yt.value && info.y[1]) yt.value=info.y[1];
+  }
+  if(hint){
+    const bits=[];
+    if(info.y) bits.push('Sold in SA '+info.y[0]+'\u2013'+(info.y[1]||'present'));
+    if(info.b&&info.b.length) bits.push('Body codes: '+info.b.slice(0,6).join(', '));
+    if(info.e&&info.e.length) bits.push('Engines: '+info.e.slice(0,6).join(', '));
+    hint.innerHTML='\u2705 '+bits.join(' &nbsp;\u00b7&nbsp; ')+'<br><span style="color:var(--text3)">Body and engine codes are optional \u2014 leave blank if you\u2019re not sure. Adding them helps buyers find this part.</span>';
+    hint.style.display='block';
+  }
 }
 
 async function savePartListing() {
@@ -1727,7 +1796,7 @@ async function savePartListing() {
   if (!name || !price) { showToast('Please enter at least a part name and price.'); return; }
   const editId = document.getElementById('edit-id').value;
   const ship = document.getElementById('ap-ship').value;
-  const listing = { name, price, seller_id: sellerDbId, category: document.getElementById('ap-cat').value, make: document.getElementById('ap-make').value||'Other', model: document.getElementById('ap-model').value||'Various', year_start: parseInt(document.getElementById('ap-yfrom').value)||null, year_end: parseInt(document.getElementById('ap-yto').value)||null, condition: document.getElementById('ap-cond').value, sku: document.getElementById('ap-sku').value||'SPF-'+Math.random().toString(36).substring(2,8).toUpperCase(), quantity: parseInt(document.getElementById('ap-qty').value)||1, location: document.getElementById('ap-loc').value, shipping_options: ship==='Both'?['Collection','Courier']:[ship], description: document.getElementById('ap-desc').value, images: uploadedUrls, status: 'active' };
+  const listing = { name, price, seller_id: sellerDbId, category: document.getElementById('ap-cat').value, make: document.getElementById('ap-make').value||'Other', model: document.getElementById('ap-model').value||'Various', year_start: parseInt(document.getElementById('ap-yfrom').value)||null, year_end: parseInt(document.getElementById('ap-yto').value)||null, condition: document.getElementById('ap-cond').value, sku: document.getElementById('ap-sku').value||'SPF-'+Math.random().toString(36).substring(2,8).toUpperCase(), quantity: parseInt(document.getElementById('ap-qty').value)||1, location: document.getElementById('ap-loc').value, shipping_options: ship==='Both'?['Collection','Courier']:[ship], description: document.getElementById('ap-desc').value, body_code: (document.getElementById('ap-body').value||'').trim()||null, engine_code: (document.getElementById('ap-engine').value||'').trim()||null, variant: (document.getElementById('ap-variant').value||'').trim()||null, images: uploadedUrls, status: 'active' };
   setBtnLoad('save-listing-btn', true, 'Saving…');
   let error;
   if (editId && !editId.startsWith('p')) { ({error} = await sb.from('listings').update(listing).eq('id', editId)); }
@@ -1746,7 +1815,12 @@ function editPart(id) {
   ['ap-name','ap-price','ap-qty','ap-sku','ap-yfrom','ap-yto','ap-desc'].forEach(k => { const f={name:p.name,price:p.price,qty:p.quantity,sku:p.sku,yfrom:p.year_start,yto:p.year_end,desc:p.description}; const id=k.replace('ap-',''); const el=document.getElementById(k); if(el)el.value=f[id]||''; });
   document.getElementById('ap-cat').value=p.category; document.getElementById('ap-cond').value=p.condition;
   document.getElementById('ap-make').value=p.make; updateApModel();
-  setTimeout(()=>{ document.getElementById('ap-model').value=p.model; },60);
+  setTimeout(()=>{
+    document.getElementById('ap-model').value=p.model||'';
+    onApModelPick();
+    const b=document.getElementById('ap-body'), e=document.getElementById('ap-engine'), v=document.getElementById('ap-variant');
+    if(b)b.value=p.body_code||''; if(e)e.value=p.engine_code||''; if(v)v.value=p.variant||'';
+  },60);
   switchPanel('addpart', document.querySelectorAll('.dnav-item')[2]);
 }
 
@@ -1759,7 +1833,7 @@ async function deletePart(id) {
 
 function cancelEdit() { clearAddForm(); switchPanel('listings', document.querySelectorAll('.dnav-item')[1]); }
 function clearAddForm() {
-  ['ap-name','ap-price','ap-qty','ap-sku','ap-yfrom','ap-yto','ap-desc','edit-id'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['ap-name','ap-price','ap-qty','ap-sku','ap-yfrom','ap-yto','ap-desc','edit-id','ap-model','ap-body','ap-engine','ap-variant'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   uploadedUrls=[]; document.getElementById('addpart-title').textContent='Add New Part';
   const t=document.getElementById('upload-thumbs'); if(t)t.remove();
 }
@@ -1869,7 +1943,7 @@ function applyFilters() {
   const pmax=parseFloat(document.getElementById('f-pmax')?.value)||Infinity;
   const ship=document.getElementById('f-ship')?.value||'';
   filtered = PARTS.filter(p => {
-    const hay=(p.name+' '+p.description+' '+p.sku+' '+p.make+' '+p.model+' '+p.category).toLowerCase();
+    const hay=(p.name+' '+p.description+' '+p.sku+' '+p.make+' '+p.model+' '+p.category+' '+(p.body_code||'')+' '+(p.engine_code||'')+' '+(p.variant||'')).toLowerCase();
     const mq=!q||q.split(/\s+/).filter(Boolean).every(t=>hay.includes(t));
     const eq=(a,b)=>String(a||'').trim().toLowerCase()===String(b||'').trim().toLowerCase();
     const mm=!make||eq(p.make,make); const mo=!model||eq(p.model,model);
@@ -2121,12 +2195,35 @@ function titleCaseMake(s){
   return t.replace(/\w\S*/g, w=>w[0].toUpperCase()+w.slice(1).toLowerCase());
 }
 
+// Models of this make sold in SA during the decoded year, ranked by what we stock.
+function vinCandidateModels(make, year){
+  const db=(typeof vehDB==='function')?vehDB():null;
+  if(!db||!db[make]||!year) return [];
+  const stock={};
+  if(typeof PARTS!=='undefined') PARTS.forEach(p=>{
+    if(String(p.make||'').trim().toLowerCase()===make.toLowerCase())
+      stock[String(p.model||'').trim().toLowerCase()]=(stock[String(p.model||'').trim().toLowerCase()]||0)+1;
+  });
+  return Object.keys(db[make])
+    .filter(m=>{ const y=db[make][m].y; return y && year>=y[0] && year<=(y[1]||9999); })
+    .map(m=>({m, n:stock[m.toLowerCase()]||0}))
+    .sort((a,b)=> b.n-a.n || a.m.localeCompare(b.m))
+    .slice(0,14);
+}
+
+function vinPickModel(m){
+  if(!window.__vin) return;
+  window.__vin.model=m;
+  document.getElementById('vin-out').innerHTML=vinRender(window.__vin,'done');
+}
+
 function vinMatchCount(d){
   if(typeof PARTS==='undefined') return 0;
   return PARTS.filter(p=>{
     const mk = !d.make || String(p.make||'').trim().toLowerCase()===d.make.toLowerCase();
     const yr = !d.year || (d.year>=(p.year_start||0) && d.year<=(p.year_end||9999));
-    return mk && yr;
+    const mo = !d.model || String(p.model||'').trim().toLowerCase()===String(d.model).trim().toLowerCase();
+    return mk && yr && mo;
   }).length;
 }
 
@@ -2174,6 +2271,20 @@ function vinRender(d, phase){
     html += '<div class="vin-warn">⚠️ The check digit does not match. For a North-American-market vehicle this usually means a typo — please re-read the VIN carefully.</div>';
   }else if(!d.checkOk){
     html += '<div class="vin-warn">The check digit does not match, which is common and expected for European and Asian vehicles — those markets do not use it. The decode above is still reliable.</div>';
+  }
+
+  if(d.make && d.year && !d.model){
+    const cands=vinCandidateModels(d.make,d.year);
+    if(cands.length){
+      html += '<div style="margin-top:1rem"><div class="vin-fact-l" style="margin-bottom:6px">'
+            + esc(d.make)+' models sold in SA in '+d.year+' \u2014 pick yours to narrow the search</div>'
+            + '<div class="vin-map">'
+            + cands.map(c=>'<button class="vin-seg" style="cursor:pointer;'
+                + (c.n?'border-color:var(--blue);color:var(--blue);font-weight:600':'color:var(--text3)')
+                + '" onclick="vinPickModel(\''+esc(c.m).replace(/'/g,"\\'")+'\')">'
+                + esc(c.m) + (c.n?' <b style="display:inline;font-size:9px">'+c.n+'</b>':'') + '</button>').join('')
+            + '</div></div>';
+    }
   }
 
   const n = vinMatchCount(d);
@@ -2286,9 +2397,15 @@ document.getElementById('co-delivery')?.addEventListener('change',function(){
 //  POPULATE DROPDOWNS
 // ══════════════════════════════════════════════════════════════
 function populateDropdowns() {
-  ['qs-make','list-make','enq-make','ap-make'].forEach(id=>{
+  // Sellers get every make in the fitment database; buyers only see makes we actually stock.
+  const dbMakes = vehDB() ? Object.keys(vehDB()).sort() : null;
+  const sellerMakes = dbMakes ? [...dbMakes,'Other'] : MAKES;
+  const stocked = (typeof PARTS!=='undefined' && PARTS.length)
+    ? [...new Set(PARTS.map(p=>String(p.make||'').trim()).filter(Boolean))].sort()
+    : MAKES;
+  [['qs-make',stocked],['list-make',sellerMakes],['enq-make',sellerMakes],['ap-make',sellerMakes]].forEach(([id,list])=>{
     const el=document.getElementById(id); if(!el||el.children.length>1)return;
-    MAKES.forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;el.appendChild(o);});
+    list.forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;el.appendChild(o);});
   });
   const yr=document.getElementById('qs-year');
   if(yr&&yr.children.length<2){for(let y=new Date().getFullYear()+1;y>=1980;y--){const o=document.createElement('option');o.value=y;o.textContent=y;yr.appendChild(o);}}
@@ -2297,7 +2414,7 @@ function populateDropdowns() {
 function updateQsModels(){
   const make=document.getElementById('qs-make').value, sel=document.getElementById('qs-model');
   sel.innerHTML='<option value="">All Models</option>';
-  if(make&&SA_VEHICLE_DATA[make])SA_VEHICLE_DATA[make].forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;sel.appendChild(o);});
+  vehModels(make).forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;sel.appendChild(o);});
   applyFilters();
 }
 
