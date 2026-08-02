@@ -1369,7 +1369,7 @@ function handleBulkFile(file) {
       if (!text || text.trim().length === 0) { showToast('CSV file is empty.'); return; }
       const rows = parseCSV(text);
       if (rows.length < 2) { showToast('CSV needs at least a header row and one data row.'); return; }
-      const headers = rows[0].map(h => (h || '').toLowerCase().trim().replace(/[^a-z0-9_]/g,'_'));
+      const headers = rows[0].map(h => String(h || '').replace(/^\uFEFF/, '').toLowerCase().trim().replace(/[^a-z0-9_]/g,'_'));
       const isWoo = headers.some(h => ['post_title','regular_price','_regular_price','post_content'].includes(h));
       const useWoo = isWoo || format === 'woocommerce';
       showToast('Detected format: ' + (useWoo ? 'WooCommerce' : 'SPF Custom') + ' — ' + (rows.length-1) + ' rows found');
@@ -1378,7 +1378,8 @@ function handleBulkFile(file) {
         .map(row => {
           const obj = {};
           headers.forEach((h, i) => { obj[h] = (row[i] || '').trim(); });
-          return useWoo ? mapWooToSPF(obj) : mapSPFCsv(obj);
+          try { return useWoo ? mapWooToSPF(obj) : mapSPFCsv(obj); }
+          catch (rowErr) { console.warn('Skipped a bad row:', rowErr.message, obj); return null; }
         })
         .filter(l => l && l.name && l.name.length > 0);
       if (listings.length === 0) { showToast('No valid listings found. Check your CSV columns match the template.'); return; }
@@ -1404,26 +1405,51 @@ function cleanImageField(raw) {
     .map(s => s.trim())
     .filter(u => /^https?:\/\/\S+\.(jpe?g|png|webp|gif|avif)(\?\S*)?$/i.test(u));
 }
+// WooCommerce packs categories as pipe-separated paths, and the "Make > Model"
+// pair is not always the first one: "MAHINDRA|MAHINDRA > PICKUP" is common.
+// Scan every segment for one containing '>' rather than assuming segment zero.
+function catParts(cat) {
+  const segs = String(cat || '').split('|').map(x => x.trim()).filter(Boolean);
+  const pair = segs.find(x => x.includes('>'));
+  if (pair) {
+    const bits = pair.split('>').map(x => x.trim());
+    return { make: bits[0] || '', model: bits.slice(1).join(' ').trim() };
+  }
+  return { make: segs[0] || '', model: '' };
+}
 function makeFromCat(cat) {
-  if (!cat) return '';
-  return cat.split('|')[0].split('>')[0].trim().replace(/-/g, ' ');
+  return catParts(cat).make.replace(/-/g, ' ').trim();
 }
 function modelFromCat(cat) {
-  if (!cat || !cat.includes('>')) return '';
-  return cat.split('|')[0].split('>')[1].trim();
+  // "KWID2016 - 2024" -> "KWID"; trailing year ranges are fitment, not model name
+  let m = catParts(cat).model;
+  m = m.replace(/\s*\d{4}\s*[-–—]\s*\d{2,4}\s*$/, '')
+       .replace(/\s*\d{4}\s*[-–—]\s*$/, '')
+       .replace(/(\D)(\d{4})\s*$/, '$1')
+       .trim();
+  return m;
+}
+// Year range hidden in the category path, e.g. "KWID2016 - 2024"
+function yearsFromCat(cat) {
+  const m = String(cat || '').match(/(\d{4})\s*[-–—]\s*(\d{4})/);
+  if (!m) return [null, null];
+  const a = +m[1], b = +m[2];
+  if (a < 1950 || a > 2100 || b < a || b > 2100) return [null, null];
+  return [a, b];
 }
 
 function mapWooToSPF(r) {
   const cat  = r.tax_product_cat || r.category || '';
   const imgs = cleanImageField(r.images);
+  const [cy0, cy1] = yearsFromCat(cat);
   return {
     name: r.post_title || r.name || '',
     category: mapWooCategory(cat),
     // CSV headers normalise "attribute:Make" -> attribute_make (not attribute_pa_make)
     make: r.attribute_make || makeFromCat(cat) || extractMake(r.post_title || '') || 'Other',
     model: r.attribute_model || modelFromCat(cat) || 'Various',
-    year_start: parseInt(r.attribute_year || r.year_start) || null,
-    year_end: parseInt(r.attribute_year_to || r.year_end) || null,
+    year_start: parseInt(r.attribute_year || r.year_start) || cy0 || null,
+    year_end: parseInt(r.attribute_year_to || r.year_end) || cy1 || null,
     condition: mapCondition(r.attribute_condition || r.condition || 'Used'),
     price: parseFloat(r.regular_price || r._regular_price || r.price || 0) || 0,
     sku: r.sku || '',
@@ -1489,7 +1515,10 @@ function parseCSV(text) {
   const rows = []; let row = []; let cell = ''; let inQuotes = false;
   for (let i = 0; i < text.length; i++) {
     const c = text[i];
-    if (c === '"') { inQuotes = !inQuotes; }
+    if (c === '"') {
+      if (inQuotes && text[i+1] === '"') { cell += '"'; i++; }   // escaped "" -> "
+      else inQuotes = !inQuotes;
+    }
     else if (c === ',' && !inQuotes) { row.push(cell); cell = ''; }
     else if ((c === '\n' || c === '\r') && !inQuotes) {
       if (c === '\r' && text[i+1] === '\n') i++;
