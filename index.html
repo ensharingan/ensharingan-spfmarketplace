@@ -171,6 +171,30 @@ nav{background:var(--blue);padding:0 1.5rem;display:flex;align-items:center;gap:
 .modal-close:hover{background:rgba(255,255,255,.26)}
 .modal-body{padding:1.4rem}
 .modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem}
+/* ══ VIN DECODER ══ */
+.vin-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:.7rem;padding-top:.7rem;border-top:1px solid var(--border)}
+.vin-bar-txt{font-size:12px;color:var(--text3)}
+.vin-link{background:none;border:none;font-family:var(--font-h);font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--blue);cursor:pointer;padding:0;display:inline-flex;align-items:center;gap:5px}
+.vin-link:hover{text-decoration:underline}
+.vin-link.hot{background:var(--red);color:#fff;padding:7px 13px;border-radius:var(--r)}
+.vin-link.hot:hover{text-decoration:none;opacity:.9}
+.vin-input{width:100%;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:17px;letter-spacing:.15em;text-transform:uppercase;padding:.75rem .9rem;border:1.5px solid var(--border2);border-radius:var(--r);outline:none;box-sizing:border-box}
+.vin-input:focus{border-color:var(--blue)}
+.vin-count{font-family:ui-monospace,monospace;font-size:11px;color:var(--text3);margin-top:5px}
+.vin-hero{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:1rem 1.1rem;margin-bottom:.9rem}
+.vin-hero-make{font-family:var(--font-h);font-size:25px;font-weight:900;text-transform:uppercase;line-height:1.05;color:var(--text)}
+.vin-hero-sub{font-size:12.5px;color:var(--text2);margin-top:3px}
+.vin-facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:8px}
+.vin-fact{background:#fff;border:1px solid var(--border);border-radius:var(--r);padding:.55rem .7rem}
+.vin-fact-l{font-family:var(--font-h);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3)}
+.vin-fact-v{font-size:13.5px;font-weight:600;color:var(--text);margin-top:2px;word-break:break-word}
+.vin-note{font-size:11.5px;color:var(--text3);margin-top:.85rem;line-height:1.55}
+.vin-err{background:#fff5f5;border:1px solid #ffd4d4;color:#b02020;font-size:12.5px;padding:.7rem .9rem;border-radius:var(--r);margin-top:.85rem;line-height:1.5}
+.vin-warn{background:#fffaf0;border:1px solid #ffe4b8;color:#8a5a00;font-size:11.5px;padding:.6rem .8rem;border-radius:var(--r);margin-top:.7rem;line-height:1.5}
+.vin-map{display:flex;flex-wrap:wrap;gap:5px;margin-top:.6rem}
+.vin-seg{font-family:ui-monospace,monospace;font-size:11.5px;padding:4px 8px;border-radius:4px;border:1px solid var(--border);background:#fff}
+.vin-seg b{display:block;font-family:var(--font-h);font-size:8.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--text3);font-weight:700}
+
 .gal-main{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:var(--rl);background:var(--bg2);display:block;border:1.5px solid var(--border)}
 .gal-thumbs{display:flex;gap:6px;margin-top:7px}
 .gal-thumb{width:52px;height:40px;object-fit:cover;border-radius:var(--r);cursor:pointer;border:1.5px solid var(--border);transition:border-color .12s;opacity:.6}
@@ -474,12 +498,16 @@ footer{background:var(--blue3);padding:2rem 1.5rem 1.25rem;margin-top:3rem}
       <div class="search-row">
         <div class="search-input-wrap">
           <svg viewBox="0 0 24 24"><path d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
-          <input class="search-main" id="main-search" type="text" placeholder="Search by part name, SKU, make, model or VIN…" oninput="applyFilters()">
+          <input class="search-main" id="main-search" type="text" placeholder="Search by part name, SKU, make, model or VIN…" oninput="applyFilters();vinSniff(this.value)">
         </div>
         <select class="search-select" id="qs-make" onchange="updateQsModels();applyFilters()"><option value="">All Makes</option></select>
         <select class="search-select" id="qs-model" onchange="applyFilters()"><option value="">All Models</option></select>
         <select class="search-select" id="qs-year" onchange="applyFilters()"><option value="">Any Year</option></select>
         <button class="search-go" onclick="applyFilters()">Search</button>
+      </div>
+      <div class="vin-bar">
+        <span class="vin-bar-txt">Not sure of the exact model or year?</span>
+        <button class="vin-link" id="vin-trigger" onclick="openVin('')">🔎 Decode my VIN →</button>
       </div>
     </div>
     <div class="hero-stats">
@@ -991,6 +1019,24 @@ footer{background:var(--blue3);padding:2rem 1.5rem 1.25rem;margin-top:3rem}
 </div>
 
 <!-- AUTH MODAL -->
+<!-- VIN DECODER MODAL -->
+<div class="overlay" id="modal-vin" onclick="closeOverlay('modal-vin',event)">
+  <div class="modal" style="max-width:620px">
+    <div class="modal-hd">
+      <span class="modal-hd-text">Spare Parts Finder — VIN Decoder</span>
+      <button class="modal-close" onclick="closeVin()">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-family:var(--font-h);font-size:19px;font-weight:900;text-transform:uppercase;color:var(--text);margin-bottom:4px">Decode Your VIN</div>
+      <p style="font-size:12.5px;color:var(--text2);line-height:1.55;margin-bottom:1rem">Enter the 17-character VIN from your licence disc, windscreen base or driver's door frame. We'll identify the vehicle and pull up the parts that fit it.</p>
+      <input class="vin-input" id="vin-input" maxlength="17" autocomplete="off" spellcheck="false" placeholder="WBAVA31050KX12345" oninput="vinOnType()" onkeydown="if(event.key==='Enter')vinDecode()">
+      <div class="vin-count" id="vin-count">0 / 17</div>
+      <button class="btn-primary btn-blue" id="vin-go" style="margin-top:.85rem;width:100%" onclick="vinDecode()" disabled>Decode VIN &rarr;</button>
+      <div id="vin-out"></div>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="modal-auth" onclick="closeOverlay('modal-auth',event)">
   <div class="modal" style="max-width:430px">
     <div class="modal-hd">
@@ -1835,6 +1881,347 @@ function applyFilters() {
   renderParts(filtered);
 }
 
+// ══════════════════════════════════════════════════════════════
+//  VIN DECODER
+//  Local WMI table is primary (works offline, covers GWM/Chery/
+//  SA-assembled vehicles that NHTSA does not know). NHTSA vPIC
+//  is optional enrichment for model/engine detail.
+// ══════════════════════════════════════════════════════════════
+const VIN_RE = /^[A-HJ-NPR-Z0-9]{17}$/;
+
+// 3-character World Manufacturer Identifier → [make, country]
+const VIN_WMI = {
+  // ── South Africa (locally assembled) ──
+  'AAV':['Volkswagen','South Africa'], 'AHT':['Toyota','South Africa'],
+  'AFA':['Ford','South Africa'],       'ADM':['Chevrolet','South Africa'],
+  'ADR':['Nissan','South Africa'],     'AC5':['Hyundai','South Africa'],
+  'AAM':['MAN','South Africa'],        'ADD':['Nissan','South Africa'],
+  // ── Germany ──
+  'WBA':['BMW','Germany'], 'WBS':['BMW','Germany'], 'WBY':['BMW','Germany'], 'WBX':['BMW','Germany'],
+  'WDB':['Mercedes-Benz','Germany'], 'WDD':['Mercedes-Benz','Germany'], 'WDC':['Mercedes-Benz','Germany'],
+  'WDF':['Mercedes-Benz','Germany'], 'W1K':['Mercedes-Benz','Germany'], 'W1N':['Mercedes-Benz','Germany'],
+  'W1V':['Mercedes-Benz','Germany'], 'WMX':['Mercedes-Benz','Germany'], 'WME':['smart','Germany'],
+  'WAU':['Audi','Germany'], 'WA1':['Audi','Germany'], 'WUA':['Audi','Germany'],
+  'WVW':['Volkswagen','Germany'], 'WV1':['Volkswagen','Germany'], 'WV2':['Volkswagen','Germany'],
+  'WVG':['Volkswagen','Germany'],
+  'W0L':['Opel','Germany'], 'W0V':['Opel','Germany'],
+  'WP0':['Porsche','Germany'], 'WP1':['Porsche','Germany'],
+  'WMW':['MINI','Germany'], 'WF0':['Ford','Germany'],
+  // ── United Kingdom ──
+  'SAL':['Land Rover','United Kingdom'], 'SAJ':['Jaguar','United Kingdom'],
+  'SCA':['Rolls-Royce','United Kingdom'], 'SCB':['Bentley','United Kingdom'],
+  'SHS':['Honda','United Kingdom'], 'SB1':['Toyota','United Kingdom'],
+  'SJN':['Nissan','United Kingdom'], 'SDB':['Peugeot','United Kingdom'],
+  // ── France / Spain / Italy / Sweden / Czech ──
+  'VF1':['Renault','France'], 'VF3':['Peugeot','France'], 'VF7':['Citroen','France'],
+  'VF6':['Renault','France'], 'VR1':['Peugeot','France'], 'VR3':['Peugeot','France'],
+  'VSS':['SEAT','Spain'], 'VSK':['Nissan','Spain'], 'VNK':['Toyota','Spain'], 'VNV':['Renault','Spain'],
+  'ZFA':['Fiat','Italy'], 'ZFF':['Ferrari','Italy'], 'ZAR':['Alfa Romeo','Italy'], 'ZAM':['Maserati','Italy'],
+  'YV1':['Volvo','Sweden'], 'YV4':['Volvo','Sweden'], 'YS3':['Saab','Sweden'],
+  'TMB':['Skoda','Czech Republic'], 'TMA':['Hyundai','Czech Republic'], 'TMP':['Skoda','Czech Republic'],
+  'TRU':['Audi','Hungary'], 'TSM':['Suzuki','Hungary'],
+  // ── Japan ──
+  'JTD':['Toyota','Japan'], 'JTE':['Toyota','Japan'], 'JTM':['Toyota','Japan'], 'JTN':['Toyota','Japan'],
+  'JTK':['Toyota','Japan'], 'JTL':['Toyota','Japan'], 'JTG':['Toyota','Japan'],
+  'JTH':['Lexus','Japan'],  'JTJ':['Lexus','Japan'],
+  'JN1':['Nissan','Japan'], 'JN6':['Nissan','Japan'], 'JN8':['Nissan','Japan'], 'JNR':['Nissan','Japan'],
+  'JNK':['Infiniti','Japan'],
+  'JHM':['Honda','Japan'], 'JHL':['Honda','Japan'], 'JH4':['Acura','Japan'],
+  'JM1':['Mazda','Japan'], 'JM3':['Mazda','Japan'], 'JM7':['Mazda','Japan'],
+  'JF1':['Subaru','Japan'], 'JF2':['Subaru','Japan'],
+  'JMB':['Mitsubishi','Japan'], 'JMY':['Mitsubishi','Japan'], 'JA3':['Mitsubishi','Japan'], 'JA4':['Mitsubishi','Japan'],
+  'JS2':['Suzuki','Japan'], 'JS3':['Suzuki','Japan'], 'JSA':['Suzuki','Japan'],
+  'JAA':['Isuzu','Japan'], 'JAB':['Isuzu','Japan'], 'JAC':['Isuzu','Japan'], 'JAE':['Isuzu','Japan'],
+  'JAL':['Isuzu','Japan'], 'JAN':['Isuzu','Japan'],
+  // ── Korea ──
+  'KMH':['Hyundai','South Korea'], 'KMF':['Hyundai','South Korea'], 'KM8':['Hyundai','South Korea'],
+  'KMJ':['Hyundai','South Korea'], 'KMY':['Hyundai','South Korea'],
+  'KNA':['Kia','South Korea'], 'KNB':['Kia','South Korea'], 'KND':['Kia','South Korea'],
+  'KNE':['Kia','South Korea'], 'KNC':['Kia','South Korea'],
+  'KL1':['Chevrolet','South Korea'], 'KLA':['Chevrolet','South Korea'], 'KL5':['Chevrolet','South Korea'],
+  'KLU':['Chevrolet','South Korea'],
+  'KPT':['SsangYong','South Korea'], 'KPA':['SsangYong','South Korea'], 'KNM':['Renault','South Korea'],
+  // ── China ──
+  'LGW':['GWM','China'],            // Great Wall Motors — also Haval / Steed / P-Series
+  'LVV':['Chery','China'], 'LVT':['Chery','China'],
+  'LJ1':['JAC','China'], 'LB2':['Geely','China'], 'L6T':['Geely','China'],
+  'LSG':['Chevrolet','China'], 'LSV':['Volkswagen','China'], 'LFV':['Volkswagen','China'],
+  'LFM':['Toyota','China'], 'LVG':['Honda','China'], 'LVH':['Honda','China'],
+  'LBV':['BMW','China'], 'LE4':['BMW','China'], 'LZW':['Wuling','China'],
+  'LDC':['Peugeot','China'], 'LMG':['GAC','China'], 'LNB':['BAIC','China'],
+  'LYV':['Volvo','China'], 'LRW':['Tesla','China'], 'LDN':['Nissan','China'],
+  // ── India ──
+  'MA1':['Mahindra','India'], 'MA6':['Mahindra','India'],
+  'MAT':['Tata','India'], 'MAL':['Hyundai','India'], 'MA3':['Suzuki','India'],
+  'MBH':['Suzuki','India'], 'MRH':['Honda','India'], 'MEE':['Renault','India'],
+  'MZB':['Isuzu','India'],
+  // ── Thailand / SE Asia ──
+  'MR0':['Toyota','Thailand'], 'MMB':['Mitsubishi','Thailand'], 'MMT':['Mitsubishi','Thailand'],
+  'MM8':['Mazda','Thailand'],  'MNA':['Ford','Thailand'], 'MNB':['Ford','Thailand'],
+  'MP1':['Isuzu','Thailand'],  'MPA':['Isuzu','Thailand'], 'MHR':['Honda','Indonesia'],
+  'MNT':['Nissan','Thailand'], 'MHF':['Toyota','Indonesia'],
+  // ── North America ──
+  '1FA':['Ford','USA'], '1FB':['Ford','USA'], '1FC':['Ford','USA'], '1FD':['Ford','USA'],
+  '1FM':['Ford','USA'], '1FT':['Ford','USA'], '2FA':['Ford','Canada'], '3FA':['Ford','Mexico'],
+  '1G1':['Chevrolet','USA'], '1GC':['Chevrolet','USA'], '1GT':['GMC','USA'], '1GY':['Cadillac','USA'],
+  '1C3':['Chrysler','USA'], '1C4':['Jeep','USA'], '1C6':['Ram','USA'], '1J4':['Jeep','USA'],
+  '3C4':['Jeep','Mexico'],
+  '1HG':['Honda','USA'], '2HG':['Honda','Canada'], '5FN':['Honda','USA'], '5J6':['Honda','USA'],
+  '1N4':['Nissan','USA'], '1N6':['Nissan','USA'], '5N1':['Nissan','USA'], '3N1':['Nissan','Mexico'],
+  '4T1':['Toyota','USA'], '4T3':['Toyota','USA'], '5TD':['Toyota','USA'], '2T1':['Toyota','Canada'],
+  '1VW':['Volkswagen','USA'], '3VW':['Volkswagen','Mexico'], '9BW':['Volkswagen','Brazil'],
+  '5YJ':['Tesla','USA'], '7SA':['Tesla','USA'],
+  '4S3':['Subaru','USA'], '4S4':['Subaru','USA'],
+  '5UX':['BMW','USA'], '4US':['BMW','USA'], '4JG':['Mercedes-Benz','USA'],
+  '3MZ':['Mazda','Mexico'], '3MV':['Mazda','Mexico'],
+  '55S':['Mercedes-Benz','USA'], '5GA':['Buick','USA']
+};
+
+// 2-character fallback for WMIs not individually listed
+const VIN_WMI2 = {
+  'JT':['Toyota','Japan'], 'JN':['Nissan','Japan'], 'JH':['Honda','Japan'],
+  'JM':['Mazda','Japan'],  'JF':['Subaru','Japan'], 'JA':['Mitsubishi','Japan'],
+  'JS':['Suzuki','Japan'], 'KM':['Hyundai','South Korea'], 'KN':['Kia','South Korea'],
+  'WB':['BMW','Germany'],  'WD':['Mercedes-Benz','Germany'], 'WA':['Audi','Germany'],
+  'WV':['Volkswagen','Germany'], 'WP':['Porsche','Germany'], 'SA':['Land Rover','United Kingdom'],
+  'YV':['Volvo','Sweden'], 'ZF':['Fiat','Italy'], 'VF':['Renault','France']
+};
+
+const VIN_REGIONS = [
+  [/^[A-C]/,'Africa'], [/^[D-G]/,'Africa'], [/^[H]/,'Asia'],
+  [/^[J-R]/,'Asia'],   [/^[S-Z]/,'Europe'], [/^[1-5]/,'North America'],
+  [/^[6-7]/,'Oceania'], [/^[8-9]/,'South America']
+];
+
+const VIN_YEAR_CODES = 'ABCDEFGHJKLMNPRSTVWXY123456789'; // 30-year cycle from 1980
+
+function vinModelYear(code){
+  const i = VIN_YEAR_CODES.indexOf(code);
+  if(i < 0) return null;
+  const cap = new Date().getFullYear() + 1;   // allow next model year
+  let best = null;
+  for(let y = 1980 + i; y <= 2100; y += 30){ if(y <= cap) best = y; }
+  return best;
+}
+
+// North-American check digit (position 9). Mandatory in NA, optional elsewhere.
+function vinCheckDigit(vin){
+  const tr={A:1,B:2,C:3,D:4,E:5,F:6,G:7,H:8,J:1,K:2,L:3,M:4,N:5,P:7,R:9,
+            S:2,T:3,U:4,V:5,W:6,X:7,Y:8,Z:9};
+  const w=[8,7,6,5,4,3,2,10,0,9,8,7,6,5,4,3,2];
+  let sum=0;
+  for(let i=0;i<17;i++){
+    const ch=vin[i];
+    const v=/[0-9]/.test(ch)? Number(ch) : tr[ch];
+    if(v===undefined) return null;
+    sum += v*w[i];
+  }
+  const r=sum%11;
+  return r===10 ? 'X' : String(r);
+}
+
+function vinLocalDecode(vin){
+  const wmi = vin.slice(0,3);
+  let hit = VIN_WMI[wmi] || VIN_WMI2[vin.slice(0,2)] || null;
+  let region = null;
+  for(const [re,name] of VIN_REGIONS){ if(re.test(vin)){ region = name; break; } }
+  return {
+    vin, wmi,
+    make:    hit ? hit[0] : null,
+    country: hit ? hit[1] : null,
+    region,
+    year:    vinModelYear(vin[9]),
+    plant:   vin[10],
+    serial:  vin.slice(11),
+    checkOk: vinCheckDigit(vin) === vin[8],
+    naVin:   /^[1-5]/.test(vin)
+  };
+}
+
+// ── UI ──────────────────────────────────────────────────────────
+function vinClean(s){ return String(s||'').toUpperCase().replace(/[^A-Z0-9]/g,''); }
+
+function openVin(prefill){
+  document.getElementById('modal-vin').classList.add('open');
+  const inp=document.getElementById('vin-input');
+  if(prefill) inp.value = vinClean(prefill);
+  vinOnType();
+  setTimeout(()=>inp.focus(),50);
+}
+function closeVin(){ document.getElementById('modal-vin').classList.remove('open'); }
+
+function vinOnType(){
+  const inp=document.getElementById('vin-input');
+  const v=vinClean(inp.value);
+  if(inp.value!==v) inp.value=v;
+  const lbl=document.getElementById('vin-count');
+  lbl.textContent = v.length + ' / 17';
+  lbl.style.color = v.length===17 ? 'var(--blue)' : 'var(--text3)';
+  document.getElementById('vin-go').disabled = v.length!==17;
+  if(v.length!==17) document.getElementById('vin-out').innerHTML='';
+}
+
+// Detect a VIN pasted into the main search box
+function vinSniff(val){
+  const v=vinClean(val);
+  const bar=document.getElementById('vin-trigger');
+  if(!bar) return;
+  if(v.length===17 && VIN_RE.test(v)){
+    bar.className='vin-link hot';
+    bar.textContent='🔎 Decode VIN '+v.slice(0,8)+'… →';
+    bar.onclick=()=>openVin(v);
+  }else{
+    bar.className='vin-link';
+    bar.textContent='🔎 Decode my VIN →';
+    bar.onclick=()=>openVin('');
+  }
+}
+
+async function vinDecode(){
+  const vin = vinClean(document.getElementById('vin-input').value);
+  const out = document.getElementById('vin-out');
+
+  if(vin.length!==17){ out.innerHTML='<div class="vin-err">A VIN must be exactly 17 characters. You entered '+vin.length+'.</div>'; return; }
+  if(!VIN_RE.test(vin)){ out.innerHTML='<div class="vin-err">A VIN never contains the letters <b>I</b>, <b>O</b> or <b>Q</b> — they are excluded to avoid confusion with 1 and 0. Please re-check the characters.</div>'; return; }
+
+  const d = vinLocalDecode(vin);
+  window.__vin = d;
+  out.innerHTML = vinRender(d, 'loading');
+  if(typeof gtag==='function') gtag('event','vin_decode',{wmi:d.wmi,make:d.make||'unknown',year:d.year||0});
+
+  // Optional enrichment — NHTSA only knows US-market vehicles
+  try{
+    const ctl=new AbortController(); const t=setTimeout(()=>ctl.abort(),6000);
+    const r=await fetch('https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVinValues/'+vin+'?format=json',{signal:ctl.signal});
+    clearTimeout(t);
+    const j=await r.json();
+    const v=j?.Results?.[0];
+    if(v){
+      if(v.Make && !d.make) d.make = titleCaseMake(v.Make);
+      if(v.Model) d.model = v.Model;
+      if(v.ModelYear && /^\d{4}$/.test(v.ModelYear)) d.year = Number(v.ModelYear);
+      d.body   = v.BodyClass || null;
+      d.engine = [v.DisplacementL ? (Math.round(v.DisplacementL*10)/10)+'L' : null,
+                  v.EngineCylinders ? v.EngineCylinders+'-cyl' : null,
+                  v.FuelTypePrimary || null].filter(Boolean).join(' · ') || null;
+      d.trim   = v.Trim || null;
+      d.drive  = v.DriveType || null;
+      d.enriched = !!(v.Model || v.BodyClass);
+    }
+  }catch(e){ /* offline or not in NHTSA — local decode still stands */ }
+
+  window.__vin = d;
+  out.innerHTML = vinRender(d, 'done');
+}
+
+function titleCaseMake(s){
+  const t=String(s).trim();
+  const known=(typeof MAKES!=='undefined'?MAKES:[]).find(m=>m.toLowerCase()===t.toLowerCase());
+  if(known) return known;
+  return t.replace(/\w\S*/g, w=>w[0].toUpperCase()+w.slice(1).toLowerCase());
+}
+
+function vinMatchCount(d){
+  if(typeof PARTS==='undefined') return 0;
+  return PARTS.filter(p=>{
+    const mk = !d.make || String(p.make||'').trim().toLowerCase()===d.make.toLowerCase();
+    const yr = !d.year || (d.year>=(p.year_start||0) && d.year<=(p.year_end||9999));
+    return mk && yr;
+  }).length;
+}
+
+function vinRender(d, phase){
+  const esc = (typeof escapeHtml==='function') ? escapeHtml : (s=>String(s==null?'':s));
+  const facts=[];
+  if(d.year)    facts.push(['Model Year', d.year]);
+  if(d.model)   facts.push(['Model', d.model]);
+  if(d.engine)  facts.push(['Engine', d.engine]);
+  if(d.body)    facts.push(['Body', d.body]);
+  if(d.trim)    facts.push(['Trim', d.trim]);
+  if(d.drive)   facts.push(['Drive', d.drive]);
+  if(d.country) facts.push(['Built In', d.country]);
+  else if(d.region) facts.push(['Region', d.region]);
+  facts.push(['Plant Code', d.plant]);
+  facts.push(['Serial', d.serial]);
+
+  const title = d.make ? esc(d.make) : 'Vehicle Identified';
+  const sub = d.make
+    ? [d.year, d.model].filter(Boolean).map(esc).join(' ') || 'Manufacturer identified from the VIN'
+    : 'We could not match this manufacturer code — the rest of the VIN still decodes below.';
+
+  let html = '<div class="vin-hero">'
+    + '<div class="vin-hero-make">' + title + '</div>'
+    + '<div class="vin-hero-sub">' + sub + '</div>'
+    + '<div class="vin-map">'
+      + '<span class="vin-seg"><b>WMI 1-3</b>' + esc(d.vin.slice(0,3)) + '</span>'
+      + '<span class="vin-seg"><b>Vehicle 4-8</b>' + esc(d.vin.slice(3,8)) + '</span>'
+      + '<span class="vin-seg"><b>Check 9</b>' + esc(d.vin[8]) + '</span>'
+      + '<span class="vin-seg"><b>Year 10</b>' + esc(d.vin[9]) + '</span>'
+      + '<span class="vin-seg"><b>Plant 11</b>' + esc(d.vin[10]) + '</span>'
+      + '<span class="vin-seg"><b>Serial 12-17</b>' + esc(d.vin.slice(11)) + '</span>'
+    + '</div></div>';
+
+  html += '<div class="vin-facts">' + facts.map(f=>
+      '<div class="vin-fact"><div class="vin-fact-l">'+esc(f[0])+'</div><div class="vin-fact-v">'+esc(f[1])+'</div></div>'
+    ).join('') + '</div>';
+
+  if(phase==='loading'){
+    html += '<div class="vin-note">Checking international database for extra detail…</div>';
+    return html;
+  }
+
+  if(!d.checkOk && d.naVin){
+    html += '<div class="vin-warn">⚠️ The check digit does not match. For a North-American-market vehicle this usually means a typo — please re-read the VIN carefully.</div>';
+  }else if(!d.checkOk){
+    html += '<div class="vin-warn">The check digit does not match, which is common and expected for European and Asian vehicles — those markets do not use it. The decode above is still reliable.</div>';
+  }
+
+  const n = vinMatchCount(d);
+  if(d.make && n>0){
+    html += '<button class="btn-primary btn-blue" style="margin-top:1rem;width:100%" onclick="vinApply()">'
+          + 'Show ' + n.toLocaleString() + ' matching part' + (n===1?'':'s') + ' →</button>';
+  }else if(d.make){
+    html += '<div class="vin-err">We don\'t currently stock parts for this vehicle. '
+          + '<a href="#" onclick="closeVin();gotoView(\'contact\',null);return false" style="color:var(--blue);font-weight:600">Send us a request</a> and we\'ll source it.</div>';
+  }
+
+  html += '<div class="vin-note">This decoder reads the manufacturer, model year and plant encoded in the VIN itself. '
+        + 'It does not check accident, theft or finance history — for that you need a paid vehicle history report.</div>';
+  return html;
+}
+
+function vinApply(){
+  const d = window.__vin; if(!d) return;
+  closeVin();
+  if(typeof resetFilters==='function') resetFilters();
+
+  const mk=document.getElementById('qs-make');
+  if(d.make && mk){
+    const opt=[...mk.options].find(o=>o.value.toLowerCase()===d.make.toLowerCase());
+    if(opt){
+      mk.value=opt.value;
+      if(typeof updateQsModels==='function') updateQsModels();
+      const ms=document.getElementById('qs-model');
+      if(d.model && ms){
+        const want=String(d.model).toLowerCase();
+        const mo=[...ms.options].find(o=>o.value && o.value.toLowerCase()===want)
+              || [...ms.options].find(o=>o.value && want.includes(o.value.toLowerCase()));
+        if(mo) ms.value=mo.value;
+      }
+    }
+  }
+  const ys=document.getElementById('qs-year');
+  if(d.year && ys){
+    const yo=[...ys.options].find(o=>String(o.value)===String(d.year));
+    if(yo) ys.value=String(d.year);
+  }
+  if(typeof gtag==='function') gtag('event','vin_apply',{make:d.make||'',model:d.model||'',year:d.year||0});
+  applyFilters();
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-browse')?.classList.add('active');
+  document.getElementById('parts-grid')?.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
 function setCat(cat,btn){activeCat=cat;document.querySelectorAll('.cat-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');applyFilters();}
 
 function resetFilters(){
@@ -1904,7 +2291,7 @@ function populateDropdowns() {
     MAKES.forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;el.appendChild(o);});
   });
   const yr=document.getElementById('qs-year');
-  if(yr&&yr.children.length<2){for(let y=2026;y>=1980;y--){const o=document.createElement('option');o.value=y;o.textContent=y;yr.appendChild(o);}}
+  if(yr&&yr.children.length<2){for(let y=new Date().getFullYear()+1;y>=1980;y--){const o=document.createElement('option');o.value=y;o.textContent=y;yr.appendChild(o);}}
 }
 
 function updateQsModels(){
