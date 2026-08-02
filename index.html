@@ -225,6 +225,7 @@ nav{background:var(--blue);padding:0 1.5rem;display:flex;align-items:center;gap:
 .shop-btn.wa{background:#25d366;border-color:#25d366}
 .shop-link{background:none;border:none;padding:0;font:inherit;color:var(--blue);cursor:pointer;font-weight:600;text-decoration:underline}
 .priv-tag{display:inline-flex;align-items:center;gap:4px;background:var(--bg2);border:1px solid var(--border2);color:var(--text2);border-radius:20px;padding:2px 9px;font-family:var(--font-h);font-size:9.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.card-price-poa{font-size:15px!important;letter-spacing:.01em;color:var(--blue)}
 .bw-hd{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:1rem}
 .bw-ttl{font-family:var(--font-h);font-size:20px;font-weight:900;text-transform:uppercase;letter-spacing:.01em;color:var(--text);line-height:1.1}
 .bw-sub{font-size:12.5px;color:var(--text2);margin-top:2px}
@@ -1738,7 +1739,7 @@ async function markReplied(id) {
 function renderMyListings(parts) {
   const el = document.getElementById('my-listings-list');
   if (!parts.length) { el.innerHTML = '<div style="text-align:center;padding:2.5rem;background:#fff;border:1.5px dashed var(--border2);border-radius:var(--rl)"><div style="font-size:2rem;opacity:.25;margin-bottom:.5rem">📦</div><div style="font-family:var(--font-h);font-size:16px;font-weight:800;text-transform:uppercase;color:var(--text3)">No listings yet</div><div style="font-size:12px;color:var(--text3);margin-top:.35rem">Click <strong>Add New Part</strong> to publish your first listing.</div></div>'; return; }
-  el.innerHTML = parts.map(p => `<div class="listing-row">${p.images?.length?`<img class="listing-thumb" src="${p.images[0]}" alt="" loading="lazy" onerror="this.parentNode.innerHTML='<div class=\'listing-thumb-ph\'>⚙️</div>'">`:'<div class="listing-thumb-ph">⚙️</div>'}<div><div class="listing-name">${p.name}</div><div class="listing-meta">${p.make} ${p.model} · ${p.year_start||''}–${p.year_end||''} · <span class="pill ${condClass(p.condition)==='cn'?'pill-active':condClass(p.condition)==='cs'?'pill-new':'pill-pending'}">${p.condition}</span> · <strong style="color:var(--blue)">R ${p.price.toLocaleString()}</strong></div><div class="listing-meta" style="margin-top:2px">SKU: ${p.sku||'—'} · ${p.location||'—'} · ${(p.shipping_options||[]).join(', ')}</div></div><div class="listing-acts"><button class="act-btn edit" onclick="editPart('${p.id}')">Edit</button><button class="act-btn del" onclick="deletePart('${p.id}')">Remove</button></div></div>`).join('');
+  el.innerHTML = parts.map(p => `<div class="listing-row">${p.images?.length?`<img class="listing-thumb" src="${p.images[0]}" alt="" loading="lazy" onerror="this.parentNode.innerHTML='<div class=\'listing-thumb-ph\'>⚙️</div>'">`:'<div class="listing-thumb-ph">⚙️</div>'}<div><div class="listing-name">${p.name}</div><div class="listing-meta">${p.make} ${p.model} · ${p.year_start||''}–${p.year_end||''} · <span class="pill ${condClass(p.condition)==='cn'?'pill-active':condClass(p.condition)==='cs'?'pill-new':'pill-pending'}">${p.condition}</span> · <strong style="color:var(--blue)">${priceText(p)}</strong></div><div class="listing-meta" style="margin-top:2px">SKU: ${p.sku||'—'} · ${p.location||'—'} · ${(p.shipping_options||[]).join(', ')}</div></div><div class="listing-acts"><button class="act-btn edit" onclick="editPart('${p.id}')">Edit</button><button class="act-btn del" onclick="deletePart('${p.id}')">Remove</button></div></div>`).join('');
 }
 
 function renderOrders(ords) {
@@ -2098,6 +2099,10 @@ async function saveProfile() {
 //  CART & CHECKOUT
 // ══════════════════════════════════════════════════════════════
 function addToCart(p) {
+  if (!hasPrice(p)) {
+    showToast('This part has no set price — message the seller for a quote.');
+    return;
+  }
   const ex = cart.find(i=>i.product.id===p.id);
   if (ex) ex.quantity++; else cart.push({product:p,quantity:1});
   const cartCount = cart.reduce((a,i)=>a+i.quantity,0); document.getElementById('cart-badge').textContent = cartCount; const mb = document.getElementById('mobile-cart-badge'); if(mb) mb.textContent = cartCount;
@@ -2150,7 +2155,9 @@ function openProduct(id) {
   document.getElementById('m-cat').textContent = p.category;
   document.getElementById('m-make').textContent = p.make+' · '+p.model;
   document.getElementById('m-name').textContent = p.name;
-  document.getElementById('m-price').textContent = 'R '+p.price.toLocaleString();
+  const mp=document.getElementById('m-price');
+  mp.textContent = priceText(p);
+  mp.style.fontSize = hasPrice(p) ? '' : '22px';
   document.getElementById('m-price-note').textContent = p.condition==='New'?'New part · Fixed price':p.condition==='Damaged/Salvage'?'Salvage vehicle · Price negotiable':'Used part · Price negotiable';
   document.getElementById('m-desc').innerHTML = (p.description||'').replace(/\n/g,'<br>').replace(/\\n/g,'<br>');
   document.getElementById('m-specs').innerHTML = `<div class="spec-item"><div class="spec-lbl">SKU</div><div class="spec-val">${p.sku||'—'}</div></div><div class="spec-item"><div class="spec-lbl">Quantity</div><div class="spec-val">${p.quantity||1}</div></div><div class="spec-item"><div class="spec-lbl">Fits</div><div class="spec-val">${p.year_start||''}–${p.year_end||''}</div></div><div class="spec-item"><div class="spec-lbl">Location</div><div class="spec-val">${p.location||'—'}</div></div>`;
@@ -2173,7 +2180,7 @@ function openProduct(id) {
   const waBtn = document.getElementById('m-wa');
   if (s.whatsapp_enabled) {
     const ph = (s.phone||'27615494504').replace(/\D/g,'');
-    const msg = `Hi ${s.business_name||'there'},\n\nI found your listing on *Spare Parts Finder Marketplace*:\n\n📦 *${p.name}*\n💰 R${p.price.toLocaleString()} · ${p.condition}\n🏷️ SKU: ${p.sku||'—'}\n\nIs this still available?`;
+    const msg = `Hi ${s.business_name||'there'},\n\nI found your listing on *Spare Parts Finder Marketplace*:\n\n📦 *${p.name}*\n💰 ${hasPrice(p)?'R'+Number(p.price).toLocaleString():'Price on enquiry'} · ${p.condition}\n🏷️ SKU: ${p.sku||'—'}\n\nIs this still available?`;
     waBtn.onclick = () => window.open(`https://wa.me/${ph}?text=${encodeURIComponent(msg)}`,'_blank');
     waBtn.style.display='block';
   } else waBtn.style.display='none';
@@ -2786,6 +2793,11 @@ function resetFilters(){
 
 function sortResults(v){const s=[...filtered];if(v==='price-low')s.sort((a,b)=>a.price-b.price);else if(v==='price-high')s.sort((a,b)=>b.price-a.price);renderParts(s);}
 
+// Salvage and stripping stock is often negotiable — showing "R 0" reads as a
+// bug, so price-less listings invite an enquiry instead.
+function hasPrice(p){ return Number(p && p.price) > 0; }
+function priceText(p){ return hasPrice(p) ? 'R ' + Number(p.price).toLocaleString() : 'Enquire for price'; }
+
 function partCardHTML(p){ return `
     <div class="part-card" onclick="openProduct('${p.id}')">
       ${p.images?.length?`<div style="position:relative"><img class="card-img" src="${p.images[0]}" loading="lazy" alt="${p.name}"><span class="cond-pill ${condClass(p.condition)}">${p.condition}</span></div>`:`<div class="card-img-ph" style="position:relative"><div class="card-img-ph-bg">⚙️</div><span style="font-size:2.8rem;position:relative;z-index:1">⚙️</span><span class="cond-pill ${condClass(p.condition)}">${p.condition}</span></div>`}
@@ -2794,7 +2806,7 @@ function partCardHTML(p){ return `
         <div class="card-name">${p.name}</div>
         <div class="card-meta">${p.category} · ${p.year_start||''}–${p.year_end||''}</div>
         <div class="card-foot">
-          <div class="card-price"><sup>R</sup>${p.price.toLocaleString()}</div>
+          ${hasPrice(p)?`<div class="card-price"><sup>R</sup>${Number(p.price).toLocaleString()}</div>`:`<div class="card-price card-price-poa">Enquire for price</div>`}
           <div class="card-loc"><div class="loc-dot"></div>${(p.location||'').split(',')[0]}</div>
         </div>
       </div>
