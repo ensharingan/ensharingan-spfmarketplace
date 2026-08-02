@@ -194,6 +194,27 @@ nav{background:var(--blue);padding:0 1.5rem;display:flex;align-items:center;gap:
 .vinp-go:hover:not(:disabled){background:var(--red2)}
 .vinp-go:disabled{opacity:.45;cursor:not-allowed}
 .vinp-hint{font-size:11.5px;color:rgba(255,255,255,.6);margin-top:.65rem;line-height:1.5}
+/* ══ BRAND WALL ══ */
+.bw-hd{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:1rem}
+.bw-ttl{font-family:var(--font-h);font-size:20px;font-weight:900;text-transform:uppercase;letter-spacing:.01em;color:var(--text);line-height:1.1}
+.bw-sub{font-size:12.5px;color:var(--text2);margin-top:2px}
+.bw-all{background:none;border:none;font-family:var(--font-h);font-size:12px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--blue);cursor:pointer;padding:0;white-space:nowrap}
+.bw-all:hover{text-decoration:underline}
+.bw-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+.bw-tile{position:relative;background:#fff;border:1.5px solid var(--border);border-radius:var(--rl);padding:1.15rem .9rem;cursor:pointer;text-align:left;transition:border-color .14s,transform .14s,box-shadow .14s;overflow:hidden}
+.bw-tile:hover{border-color:var(--blue);transform:translateY(-2px);box-shadow:var(--shadow)}
+.bw-tile:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.bw-mark{font-family:var(--font-h);font-size:34px;font-weight:900;line-height:1;color:var(--bg2);letter-spacing:-.03em;position:absolute;right:8px;bottom:2px;pointer-events:none;user-select:none}
+.bw-name{position:relative;font-family:var(--font-h);font-size:16.5px;font-weight:800;text-transform:uppercase;color:var(--text);line-height:1.15;letter-spacing:.01em}
+.bw-count{position:relative;font-size:12px;color:var(--text3);margin-top:5px}
+.bw-count b{color:var(--blue);font-weight:700}
+.bw-more{grid-column:1/-1;text-align:center;padding:.9rem;background:var(--bg2);border:1.5px dashed var(--border2);border-radius:var(--rl);font-family:var(--font-h);font-size:12.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--text2);cursor:pointer}
+.bw-more:hover{border-color:var(--blue);color:var(--blue)}
+.crumb{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:.85rem}
+.crumb-back{background:none;border:none;font-family:var(--font-h);font-size:12px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--blue);cursor:pointer;padding:0}
+.crumb-back:hover{text-decoration:underline}
+.crumb-now{font-family:var(--font-h);font-size:15px;font-weight:900;text-transform:uppercase;color:var(--text)}
+@media(max-width:700px){.bw-grid{grid-template-columns:repeat(auto-fill,minmax(132px,1fr))}.bw-mark{font-size:26px}}
 @media(max-width:700px){.vinp-row{grid-template-columns:1fr}.vinp-in{font-size:16px;letter-spacing:.14em;padding-right:66px}.hero-est-rule{flex-basis:20px}}
 .vin-bar-txt{font-size:12px;color:var(--text3)}
 .vin-link{background:none;border:none;font-family:var(--font-h);font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--blue);cursor:pointer;padding:0;display:inline-flex;align-items:center;gap:5px}
@@ -621,6 +642,22 @@ footer{background:var(--blue3);padding:2rem 1.5rem 1.25rem;margin-top:3rem}
     </div>
     <!-- Grid -->
     <div>
+      <div id="brand-wall">
+        <div class="bw-hd">
+          <div>
+            <div class="bw-ttl">Shop by vehicle brand</div>
+            <div class="bw-sub" id="bw-sub">Pick a make to see what we have in stock.</div>
+          </div>
+          <button class="bw-all" onclick="showAllParts()">Browse every part →</button>
+        </div>
+        <div class="bw-grid" id="bw-grid"></div>
+      </div>
+
+      <div id="parts-pane" style="display:none">
+      <div class="crumb" id="crumb" style="display:none">
+        <button class="crumb-back" onclick="backToBrands()">← All brands</button>
+        <span class="crumb-now" id="crumb-now"></span>
+      </div>
       <div class="grid-header">
         <div class="grid-count">Showing <span id="results-num">0</span> results</div>
         <select class="sort-sel" onchange="sortResults(this.value)">
@@ -630,6 +667,7 @@ footer{background:var(--blue3);padding:2rem 1.5rem 1.25rem;margin-top:3rem}
         </select>
       </div>
       <div class="parts-grid" id="parts-grid"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -1319,6 +1357,7 @@ async function loadListings() {
   PARTS = all; filtered = [...PARTS];
   updateHeroStats();
   renderParts(filtered);
+  syncBrowseMode();
 }
 
 function useDemoData() {
@@ -1983,6 +2022,94 @@ function toggleEnqForm(){const f=document.getElementById('enq-form');f.style.dis
 // ══════════════════════════════════════════════════════════════
 function condClass(c){return c==='New'?'cn':c==='Damaged/Salvage'?'cs':'cu';}
 
+// ══════════════════════════════════════════════════════════════
+//  BRAND WALL — the default landing view
+// ══════════════════════════════════════════════════════════════
+let bwExpanded = false;
+const BW_INITIAL = 12;
+
+function brandCounts(){
+  if(typeof PARTS==='undefined') return [];
+  const map={};
+  PARTS.forEach(p=>{
+    const m=String(p.make||'').trim();
+    if(!m || m.toLowerCase()==='other' || m.toLowerCase()==='car parts') return;
+    const k=m.toLowerCase();
+    if(!map[k]) map[k]={name:m,n:0};
+    map[k].n++;
+  });
+  return Object.values(map).sort((a,b)=> b.n-a.n || a.name.localeCompare(b.name));
+}
+
+function renderBrandWall(){
+  const grid=document.getElementById('bw-grid'); if(!grid) return;
+  const esc=(typeof escapeHtml==='function')?escapeHtml:(x=>String(x==null?'':x));
+  const all=brandCounts();
+  if(!all.length){ grid.innerHTML=''; return; }
+  const shown = bwExpanded ? all : all.slice(0, BW_INITIAL);
+  const sub=document.getElementById('bw-sub');
+  if(sub) sub.textContent = all.length+' makes in stock — pick one to see the parts.';
+  grid.innerHTML = shown.map(b=>{
+    const initials = b.name.replace(/[^A-Za-z]/g,'').slice(0,3).toUpperCase();
+    return '<button class="bw-tile" onclick="pickBrand(\''+esc(b.name).replace(/'/g,"\\'")+'\')" aria-label="'+esc(b.name)+', '+b.n+' parts">'
+      + '<span class="bw-mark" aria-hidden="true">'+esc(initials)+'</span>'
+      + '<div class="bw-name">'+esc(b.name)+'</div>'
+      + '<div class="bw-count"><b>'+b.n.toLocaleString()+'</b> parts</div>'
+      + '</button>';
+  }).join('')
+  + (all.length>BW_INITIAL ? '<button class="bw-more" onclick="toggleBrandWall()">'
+      + (bwExpanded ? 'Show fewer brands' : 'Show all '+all.length+' brands') + '</button>' : '');
+}
+
+function toggleBrandWall(){ bwExpanded=!bwExpanded; renderBrandWall(); }
+
+function pickBrand(make){
+  const mk=document.getElementById('qs-make');
+  if(mk){
+    const opt=[...mk.options].find(o=>o.value.toLowerCase()===String(make).toLowerCase());
+    if(opt){ mk.value=opt.value; if(typeof updateQsModels==='function'){ updateQsModels(); return; } }
+  }
+  applyFilters();
+}
+
+function backToBrands(){
+  bwExpanded=false;
+  if(typeof resetFilters==='function') resetFilters();
+  document.getElementById('brand-wall')?.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function showAllParts(){
+  forceParts=true;
+  applyFilters();
+  document.getElementById('parts-pane')?.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+let forceParts=false;
+
+// True when the buyer has narrowed anything — that's when parts replace brands.
+function filtersActive(){
+  const v=id=>(document.getElementById(id)?.value||'').trim();
+  return !!(v('main-search')||v('qs-make')||v('qs-model')||v('qs-year')||
+            v('f-cond')||v('f-pmin')||v('f-pmax')||v('f-ship')||activeCat);
+}
+
+function syncBrowseMode(){
+  const active=filtersActive();
+  const showParts = active || forceParts;
+  const wall=document.getElementById('brand-wall');
+  const pane=document.getElementById('parts-pane');
+  if(wall) wall.style.display = showParts ? 'none' : 'block';
+  if(pane) pane.style.display = showParts ? 'block' : 'none';
+  if(!showParts){ renderBrandWall(); return; }
+  const crumb=document.getElementById('crumb'), now=document.getElementById('crumb-now');
+  const make=(document.getElementById('qs-make')?.value||'').trim();
+  const model=(document.getElementById('qs-model')?.value||'').trim();
+  if(crumb&&now){
+    if(make){ now.textContent = model ? make+' · '+model : make; crumb.style.display='flex'; }
+    else { now.textContent = activeCat || 'All parts'; crumb.style.display='flex'; }
+  }
+}
+
 function applyFilters() {
   const q=document.getElementById('main-search').value.toLowerCase();
   const make=document.getElementById('qs-make').value;
@@ -2003,6 +2130,7 @@ function applyFilters() {
     return mq&&mm&&mo&&my&&mc&&mco&&mp&&ms;
   });
   renderParts(filtered);
+  syncBrowseMode();
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -2386,6 +2514,7 @@ function vinApply(){
     if(yo) ys.value=String(d.year);
   }
   if(typeof gtag==='function') gtag('event','vin_apply',{make:d.make||'',model:d.model||'',year:d.year||0});
+  forceParts=true;
   applyFilters();
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('view-browse')?.classList.add('active');
@@ -2401,7 +2530,8 @@ function resetFilters(){
   document.getElementById('qs-model').innerHTML='<option value="">All Models</option>';
   document.querySelectorAll('.cat-btn').forEach(b=>b.classList.remove('active'));
   document.querySelector('.cat-btn').classList.add('active');
-  filtered=[...PARTS]; renderParts(filtered);
+  forceParts=false;
+  filtered=[...PARTS]; renderParts(filtered); syncBrowseMode();
 }
 
 function sortResults(v){const s=[...filtered];if(v==='price-low')s.sort((a,b)=>a.price-b.price);else if(v==='price-high')s.sort((a,b)=>b.price-a.price);renderParts(s);}
