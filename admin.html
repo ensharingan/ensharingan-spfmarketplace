@@ -1417,6 +1417,39 @@ function catParts(cat) {
   }
   return { make: segs[0] || '', model: '' };
 }
+// "TOYOTA" / "mercedes benz" -> the exact spelling already used in the catalogue,
+// otherwise imports fragment every make/model filter.
+const MAKE_CANON = {
+  'mercedes':'Mercedes-Benz','mercedes benz':'Mercedes-Benz','mercedesbenz':'Mercedes-Benz',
+  'mercedes-benz':'Mercedes-Benz','vw':'Volkswagen','volkswagen':'Volkswagen',
+  'bmw':'BMW','gwm':'GWM','great wall':'GWM','haval':'Haval','mg':'MG','jac':'JAC',
+  'kia':'Kia','audi':'Audi','toyota':'Toyota','nissan':'Nissan','mazda':'Mazda',
+  'ford':'Ford','honda':'Honda','hyundai':'Hyundai','isuzu':'Isuzu','jeep':'Jeep',
+  'renault':'Renault','opel':'Opel','peugeot':'Peugeot','citroen':'Citroen',
+  'suzuki':'Suzuki','subaru':'Subaru','mitsubishi':'Mitsubishi','volvo':'Volvo',
+  'chevrolet':'Chevrolet','chev':'Chevrolet','chery':'Chery','cherry':'Chery',
+  'datsun':'Datsun','fiat':'Fiat','mahindra':'Mahindra','tata':'Tata','proton':'Proton',
+  'land rover':'Land Rover','landrover':'Land Rover','range rover':'Land Rover',
+  'jaguar':'Jaguar','lexus':'Lexus','mini':'MINI','porsche':'Porsche','porche':'Porsche',
+  'ssangyong':'SsangYong','ssang yong':'SsangYong','daihatsu':'Daihatsu','daewoo':'Daewoo',
+  'byd':'BYD','baic':'BAIC','foton':'Foton','geely':'Geely','omoda':'Omoda','jetour':'Jetour'
+};
+function canonMake(raw) {
+  const t = String(raw || '').trim().replace(/\s+/g,' ');
+  if (!t) return '';
+  const hit = MAKE_CANON[t.toLowerCase()];
+  if (hit) return hit;
+  // Title Case as a fallback, but leave short codes (BMW, GWM, MG) uppercase
+  if (t.length <= 3) return t.toUpperCase();
+  return t.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+}
+function canonModel(raw) {
+  const t = String(raw || '').trim().replace(/\s+/g,' ');
+  if (!t) return '';
+  if (t.length <= 3 || /\d/.test(t)) return t.toUpperCase() === t ? t : t;
+  return t.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+}
+
 function makeFromCat(cat) {
   return catParts(cat).make.replace(/-/g, ' ').trim();
 }
@@ -1446,8 +1479,8 @@ function mapWooToSPF(r) {
     name: r.post_title || r.name || '',
     category: mapWooCategory(cat),
     // CSV headers normalise "attribute:Make" -> attribute_make (not attribute_pa_make)
-    make: r.attribute_make || makeFromCat(cat) || extractMake(r.post_title || '') || 'Other',
-    model: r.attribute_model || modelFromCat(cat) || 'Various',
+    make: canonMake(r.attribute_make || makeFromCat(cat) || extractMake(r.post_title || '')) || 'Other',
+    model: canonModel(r.attribute_model || modelFromCat(cat)) || 'Various',
     year_start: parseInt(r.attribute_year || r.year_start) || cy0 || null,
     year_end: parseInt(r.attribute_year_to || r.year_end) || cy1 || null,
     condition: mapCondition(r.attribute_condition || r.condition || 'Used'),
@@ -1460,6 +1493,7 @@ function mapWooToSPF(r) {
     // outofstock / unpublished rows import as inactive rather than going live
     status: (r.stock_status === 'outofstock' || (r.post_status && r.post_status !== 'Published'))
               ? 'inactive' : 'active',
+    external_id: r.id || r.external_id || r.post_id || null,
     _preview_img: imgs[0] || ''
   };
 }
@@ -1470,7 +1504,7 @@ function mapSPFCsv(r) {
   return {
     name: r.name || '',
     category: r.category || 'Engine & Components',
-    make: r.make || 'Other',
+    make: canonMake(r.make) || 'Other',
     model: r.model || 'Various',
     year_start: parseInt(r.year_start) || null,
     year_end: parseInt(r.year_end) || null,
@@ -1560,14 +1594,25 @@ async function importBulkListings() {
   document.getElementById('bulk-progress-card').style.display = 'block';
 
   let imported = 0; let failed = 0;
+  const updatedOrNew = { dupes: 0 };
   const total = bulkParsedListings.length;
+  const withExt = bulkParsedListings.filter(l => l.external_id).length;
 
   for (let i = 0; i < bulkParsedListings.length; i++) {
     const listing = { ...bulkParsedListings[i], seller_id: sellerId };
     delete listing._preview_img;
     if (!listing.sku) listing.sku = 'SPF-' + Math.random().toString(36).substring(2,8).toUpperCase();
 
-    const { error } = await sb.from('listings').insert(listing);
+    // Upsert on (seller_id, external_id): re-importing the same export updates
+    // the existing rows instead of creating a second copy of the catalogue.
+    let error;
+    if (listing.external_id) {
+      ({ error } = await sb.from('listings')
+        .upsert(listing, { onConflict: 'seller_id,external_id' }));
+      if (error) updatedOrNew.dupes++;
+    } else {
+      ({ error } = await sb.from('listings').insert(listing));
+    }
     if (error) { failed++; console.error('Import error:', error); }
     else { imported++; }
 
@@ -1577,7 +1622,9 @@ async function importBulkListings() {
   }
 
   document.getElementById('bulk-progress-title').textContent = '✅ Import Complete!';
-  document.getElementById('bulk-progress-text').textContent = imported + ' imported successfully' + (failed ? ', ' + failed + ' failed' : '');
+  document.getElementById('bulk-progress-text').textContent =
+    imported + ' imported' + (failed ? ', ' + failed + ' failed' : '')
+    + (withExt ? ' · ' + withExt + ' matched on source ID (re-imports update, not duplicate)' : '');
   document.getElementById('bulk-progress-bar').style.background = failed ? 'var(--warn)' : 'var(--success)';
 
   logAudit('Bulk Import', imported + ' listings imported for seller ' + sellerId);

@@ -1073,6 +1073,24 @@ footer{background:var(--blue3);padding:2rem 1.5rem 1.25rem;margin-top:3rem}
               <div class="form-row"><label>Website</label><input type="text" id="prof-web" placeholder="https://yourbusiness.co.za"></div>
             </div>
             <div class="form-row"><label>Business Address</label><textarea id="prof-addr" rows="2" placeholder="Street, suburb, city, province"></textarea></div>
+
+            <div id="shop-profile-fields" style="display:none;border-top:1px solid var(--border);padding-top:1rem;margin-top:.4rem">
+              <div style="font-family:var(--font-h);font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text);margin-bottom:.3rem">Your shop page</div>
+              <p style="font-size:12px;color:var(--text3);margin-bottom:.9rem;line-height:1.5">Buyers can browse your shop from the Shops tab and from any of your parts. This is what they see.</p>
+              <div class="prof-grid">
+                <div class="form-row"><label>City / Town</label><input type="text" id="prof-city" placeholder="Randburg"></div>
+                <div class="form-row"><label>Shop Link</label><input type="text" id="prof-slug" placeholder="my-auto-parts"></div>
+              </div>
+              <div class="form-row"><label>About Your Shop</label>
+                <textarea id="prof-about" rows="3" maxlength="400" placeholder="What you specialise in, how long you've been trading, which makes you stock." oninput="document.getElementById('about-count').textContent=this.value.length"></textarea>
+                <div style="font-size:11px;color:var(--text3);margin-top:4px"><span id="about-count">0</span> / 400</div>
+              </div>
+              <div class="form-row"><label>Logo Image URL</label><input type="text" id="prof-logo" placeholder="https://res.cloudinary.com/…/logo.png"></div>
+            </div>
+
+            <div id="private-note" style="display:none;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:.75rem .9rem;font-size:12px;color:var(--text2);line-height:1.55;margin-bottom:1rem">
+              You're registered as a <b>private seller</b>, so your parts appear on the marketplace without a public shop page. If you're trading as a business and want one, get in touch and we'll switch you over.
+            </div>
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem">
               <input type="checkbox" id="prof-wa" checked style="width:auto;accent-color:var(--blue)">
               <label style="display:inline;font-size:13px;text-transform:none;letter-spacing:0;color:var(--text2);margin:0" for="prof-wa">Enable WhatsApp direct enquiries (recommended)</label>
@@ -1316,14 +1334,17 @@ async function doRegister() {
   if (!name || !email || !pass) { showToast('Please fill in all required fields.'); return; }
   if (pass.length < 8) { showToast('Password must be at least 8 characters.'); return; }
   setBtnLoad('reg-btn', true, 'Creating account…');
-  const { data, error } = await sb.auth.signUp({ email, password: pass, options: { data: { full_name: name, role } } });
+  const { data, error } = await sb.auth.signUp({ email, password: pass, options: { data: { full_name: name, role,
+      seller_type: document.getElementById('reg-seller-type')?.value || 'business',
+      business_name: biz || '',
+      phone: document.getElementById('reg-phone')?.value || '' } } });
   setBtnLoad('reg-btn', false, 'Create Account →');
   if (error) { showToast('Registration failed: ' + error.message); return; }
   if (role === 'seller' && data.user) {
     const sellerType = document.getElementById('reg-seller-type')?.value || 'business';
     const bizName = biz || (sellerType==='private' ? name : name + ' Spares');
     const slug = bizName.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'') + '-' + Math.random().toString(36).slice(2,6);
-    await sb.from('sellers').insert({ user_id: data.user.id, business_name: bizName, contact_person: name, email, phone: document.getElementById('reg-phone').value || '', status: 'approved', seller_type: sellerType, slug });
+    await sb.from('sellers').insert({ user_id: data.user.id, business_name: bizName, contact_person: name, email, phone: document.getElementById('reg-phone').value || '', status: 'pending', seller_type: sellerType, slug });
   }
   document.getElementById('modal-auth').classList.remove('open');
   showSuccess('🎉', 'Welcome to SPF Marketplace!', role === 'seller' ? 'Account created! Check your email to verify, then sign in to access your seller dashboard.' : 'Account created! You can now browse and enquire on parts across South Africa.');
@@ -1372,11 +1393,33 @@ async function onAuth(supaUser, role) {
     return;
   }
   if (role === 'seller' || role === 'admin') {
+    await ensureSellerRow(supaUser);
     await loadSellerData();
     document.getElementById('nav-tab-dash').style.display = 'flex'; const mdb = document.getElementById('mobile-dash-btn'); if(mdb) mdb.style.display = 'block';
     updateDashboard();
     gotoView('dashboard', document.getElementById('nav-tab-dash'));
   } else { showToast('Welcome back, ' + supaUser.email.split('@')[0] + '!'); }
+}
+
+// If sign-up happened before a session existed (email confirmation on), the
+// sellers row can't be written at registration time. Create it on first sign-in.
+async function ensureSellerRow(supaUser){
+  try{
+    const { data: existing } = await sb.from('sellers').select('id').eq('user_id', supaUser.id).maybeSingle();
+    if (existing) return;
+    const meta = supaUser.user_metadata || {};
+    if (meta.role && meta.role !== 'seller') return;
+    const name = meta.full_name || (supaUser.email||'').split('@')[0];
+    const type = meta.seller_type || 'business';
+    const biz  = meta.business_name || (type==='private' ? name : name + ' Spares');
+    const slug = biz.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')
+               + '-' + Math.random().toString(36).slice(2,6);
+    await sb.from('sellers').insert({
+      user_id: supaUser.id, business_name: biz, contact_person: name,
+      email: supaUser.email, phone: meta.phone || '', status: 'pending',
+      seller_type: type, slug
+    });
+  }catch(e){ console.warn('ensureSellerRow:', e.message); }
 }
 
 async function checkSession() {
@@ -1706,6 +1749,7 @@ function renderOrders(ords) {
 }
 
 function switchPanel(panel, el) {
+  if(panel==='profile') setTimeout(syncProfileType,0);
   document.querySelectorAll('.dash-panel').forEach(p => p.classList.remove('active'));
   document.getElementById('panel-'+panel)?.classList.add('active');
   document.querySelectorAll('.dnav-item').forEach(n => n.classList.remove('active'));
@@ -2007,10 +2051,46 @@ function clearAddForm() {
   const t=document.getElementById('upload-thumbs'); if(t)t.remove();
 }
 
+// Show the shop-page fields only to business sellers.
+function syncProfileType(){
+  const isBiz = !sellerProfile || (sellerProfile.seller_type||'business')==='business';
+  const sec=document.getElementById('shop-profile-fields');
+  const note=document.getElementById('private-note');
+  if(sec)  sec.style.display  = isBiz ? 'block' : 'none';
+  if(note) note.style.display = isBiz ? 'none'  : 'block';
+  if(!isBiz || !sellerProfile) return;
+  const set=(id,v)=>{const e=document.getElementById(id); if(e&&!e.value) e.value=v||'';};
+  set('prof-city', sellerProfile.city);
+  set('prof-slug', sellerProfile.slug);
+  set('prof-about', sellerProfile.about);
+  set('prof-logo', sellerProfile.logo_url);
+  const c=document.getElementById('about-count');
+  if(c) c.textContent=(document.getElementById('prof-about')?.value||'').length;
+}
+
+function slugify(v){
+  return String(v||'').toLowerCase().trim()
+    .replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,60);
+}
+
 async function saveProfile() {
   const upd = { business_name: document.getElementById('prof-biz').value, contact_person: document.getElementById('prof-contact').value, phone: document.getElementById('prof-phone').value, email: document.getElementById('prof-email').value, operating_hours: document.getElementById('prof-hours').value, whatsapp_enabled: document.getElementById('prof-wa').checked, address:{city:document.getElementById('prof-loc').value} };
+  if (!sellerProfile || (sellerProfile.seller_type||'business')==='business') {
+    upd.city  = (document.getElementById('prof-city')?.value||'').trim() || null;
+    upd.about = (document.getElementById('prof-about')?.value||'').trim() || null;
+    upd.logo_url = (document.getElementById('prof-logo')?.value||'').trim() || null;
+    const rawSlug = document.getElementById('prof-slug')?.value;
+    const slug = slugify(rawSlug || upd.business_name);
+    if (slug) upd.slug = slug;
+  }
   setBtnLoad('save-prof-btn', true, 'Saving…');
-  if (sellerDbId) { const {error} = await sb.from('sellers').update(upd).eq('id', sellerDbId); sellerProfile={...sellerProfile,...upd}; setBtnLoad('save-prof-btn', false, 'Save Profile →'); showToast(error?'Error: '+error.message:'Profile saved!'); }
+  if (sellerDbId) {
+    const {error} = await sb.from('sellers').update(upd).eq('id', sellerDbId);
+    setBtnLoad('save-prof-btn', false, 'Save Profile →');
+    if (error && /duplicate|unique/i.test(error.message||'')) { showToast('That shop link is already taken — try another.'); return; }
+    sellerProfile={...sellerProfile,...upd};
+    showToast(error?'Error: '+error.message:'Profile saved!');
+  }
   else { setBtnLoad('save-prof-btn', false, 'Save Profile →'); showToast('Profile saved (demo mode).'); }
 }
 
