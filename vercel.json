@@ -2,19 +2,23 @@
   "rewrites": [
     { "source": "/admin", "destination": "/admin.html" },
     { "source": "/admin.html", "destination": "/admin.html" },
-    { "source": "/((?!admin\\.html$|.*\\.(?:js|json|css|png|jpg|jpeg|gif|svg|webp|ico|txt|xml|woff2?|map)$).*)", "destination": "/index.html" }
+
+    { "source": "/part/:slug", "destination": "/api/part?slug=:slug" },
+    { "source": "/brand/:make", "destination": "/api/brand?make=:make" },
+    { "source": "/sitemap.xml", "destination": "/api/sitemap" },
+    { "source": "/sitemap-pages.xml", "destination": "/api/sitemap-pages" },
+    { "source": "/sitemap-parts-:page.xml", "destination": "/api/sitemap?page=:page" },
+    { "source": "/feed.xml", "destination": "/api/feed" },
+
+    { "source": "/((?!admin\\.html$|api/|robots\\.txt$|.*\\.(?:js|json|css|png|jpg|jpeg|gif|svg|webp|ico|txt|xml|woff2?|map)$).*)", "destination": "/index.html" }
   ],
   "headers": [
-    {
-      "source": "/vehicles.js",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=604800, stale-while-revalidate=86400" },
-        { "key": "Content-Type", "value": "application/javascript; charset=utf-8" }
-      ]
-    },
-    {
-      "source": "/sw.js",
-      "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
-    }
+    { "source": "/vehicles.js", "headers": [
+      { "key": "Cache-Control", "value": "public, max-age=604800, stale-while-revalidate=86400" }
+    ]},
+    { "source": "/assets/(.*)", "headers": [
+      { "key": "Cache-Control", "value": "public, max-age=2592000" }
+    ]},
+    { "source": "/sw.js", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] }
   ]
 }

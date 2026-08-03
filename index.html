@@ -14,6 +14,16 @@
 </script>
 <title>Spare Parts Finder — Marketplace</title>
 <meta name="description" content="South Africa's trusted auto spare parts marketplace. Buy and sell new, used and salvage vehicle parts from verified local sellers.">
+<link rel="canonical" href="https://marketplace.sparepartsfinder.co.za/">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Spare Parts Finder">
+<meta property="og:title" content="Spare Parts Finder — SA Auto Spare Parts Marketplace">
+<meta property="og:description" content="New, used and salvage vehicle parts from verified South African sellers. Delivered nationwide or collect directly.">
+<meta property="og:image" content="https://marketplace.sparepartsfinder.co.za/assets/sell-banner.jpg">
+<meta property="og:url" content="https://marketplace.sparepartsfinder.co.za/">
+<meta property="og:locale" content="en_ZA">
+<meta name="twitter:card" content="summary_large_image">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script defer src="/vehicles.js"></script>
@@ -1475,6 +1485,7 @@ async function loadListings() {
   PARTS = all; filtered = [...PARTS];
   updateHeroStats();
   setFooterYear();
+  setTimeout(openDeepLink,0);
   renderParts(filtered);
   syncBrowseMode();
 }
@@ -1497,6 +1508,14 @@ function useDemoData() {
   filtered = [...PARTS];
   renderParts(filtered);
   if (SUPABASE_URL.includes('YOUR_PROJECT')) showBanner('Running in demo mode — add your Supabase keys to go live');
+}
+
+// Server-rendered /part/<slug>-<id> pages link back as /#part-<id>.
+function openDeepLink(){
+  const m=(location.hash||'').match(/^#part-([0-9a-f-]{36})$/i);
+  if(!m || typeof PARTS==='undefined') return;
+  const p=PARTS.find(x=>String(x.id)===m[1]);
+  if(p){ forceParts=true; openProduct(p.id); }
 }
 
 function setFooterYear(){
