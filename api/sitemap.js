@@ -1,4 +1,4 @@
-import { sbSelect, esc, partUrl, slugify, SITE } from './_lib.js';
+import { sbSelect, esc, partUrl, SUPABASE_URL, SUPABASE_ANON, SITE } from './_lib.js';
 
 const PER_PAGE = 5000; // Google's limit is 50k URLs / 50MB per sitemap
 
@@ -10,25 +10,27 @@ export default async function handler(req, res) {
 
     // /sitemap.xml -> index pointing at the child sitemaps
     if (!page) {
-      const head = await fetch(
-        `${process.env.SUPABASE_URL || 'https://ycoclceordqbeumeujzf.supabase.co'}/rest/v1/listings?status=eq.active&select=id`,
-        {
-          method: 'HEAD',
-          headers: {
-            apikey: process.env.SUPABASE_ANON_KEY || '',
-            Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY || ''}`,
-            Prefer: 'count=exact',
-            Range: '0-0'
+      let total = 0;
+      try {
+        const countRes = await fetch(
+          `${SUPABASE_URL}/rest/v1/listings?status=eq.active&select=id&limit=1`,
+          {
+            headers: {
+              apikey: SUPABASE_ANON,
+              Authorization: `Bearer ${SUPABASE_ANON}`,
+              Prefer: 'count=exact',
+              Range: '0-0'
+            }
           }
-        }
-      );
-      const range = head.headers.get('content-range') || '0-0/0';
-      const total = parseInt(range.split('/')[1] || '0', 10);
+        );
+        const range = countRes.headers.get('content-range') || '';
+        total = parseInt(range.split('/')[1] || '0', 10) || 0;
+      } catch (e) { total = 0; }
+
       const pages = Math.max(1, Math.ceil(total / PER_PAGE));
       const today = new Date().toISOString().slice(0, 10);
 
-      const parts = [];
-      parts.push(`<sitemap><loc>${SITE}/sitemap-pages.xml</loc><lastmod>${today}</lastmod></sitemap>`);
+      const parts = [`<sitemap><loc>${SITE}/sitemap-pages.xml</loc><lastmod>${today}</lastmod></sitemap>`];
       for (let i = 1; i <= pages; i++) {
         parts.push(`<sitemap><loc>${SITE}/sitemap-parts-${i}.xml</loc><lastmod>${today}</lastmod></sitemap>`);
       }
@@ -40,12 +42,12 @@ export default async function handler(req, res) {
     // /sitemap-parts-N.xml
     const from = (page - 1) * PER_PAGE;
     const rows = await sbSelect(
-      `listings?status=eq.active&select=id,name,make,model,updated_at,created_at,images` +
+      `listings?status=eq.active&select=id,name,make,model,created_at,images` +
       `&order=created_at.desc&offset=${from}&limit=${PER_PAGE}`
     );
 
     const urls = rows.map(p => {
-      const lastmod = (p.updated_at || p.created_at || '').slice(0, 10);
+      const lastmod = (p.created_at || '').slice(0, 10);
       const img = Array.isArray(p.images) && p.images[0];
       return `<url><loc>${esc(partUrl(p))}</loc>` +
         (lastmod ? `<lastmod>${lastmod}</lastmod>` : '') +
