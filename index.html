@@ -2873,7 +2873,43 @@ function renderParts(data) {
 // ══════════════════════════════════════════════════════════════
 //  NAVIGATION & UI
 // ══════════════════════════════════════════════════════════════
+// ── Mobile menu + user dropdown ──────────────────────────────
+function toggleMobileMenu(){
+  const m=document.getElementById('mobile-menu');
+  const h=document.getElementById('hamburger');
+  if(!m) return;
+  const open=m.classList.toggle('open');
+  if(h) h.classList.toggle('open', open);
+  document.body.style.overflow = open ? 'hidden' : '';
+  closeUserMenu();
+}
+function closeMobileMenu(){
+  const m=document.getElementById('mobile-menu');
+  const h=document.getElementById('hamburger');
+  if(m) m.classList.remove('open');
+  if(h) h.classList.remove('open');
+  document.body.style.overflow='';
+}
+function toggleUserMenu(){
+  const d=document.getElementById('user-dropdown');
+  if(d) d.classList.toggle('open');
+}
+function closeUserMenu(){
+  const d=document.getElementById('user-dropdown');
+  if(d) d.classList.remove('open');
+}
+// Clicking anywhere else closes the dropdown
+document.addEventListener('click', e => {
+  const wrap=document.getElementById('user-menu-wrap');
+  if(wrap && !wrap.contains(e.target)) closeUserMenu();
+});
+// Escape closes both
+document.addEventListener('keydown', e => {
+  if(e.key==='Escape'){ closeMobileMenu(); closeUserMenu(); }
+});
+
 function gotoView(view, btn) {
+  closeMobileMenu();
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('view-'+view)?.classList.add('active');
   document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
