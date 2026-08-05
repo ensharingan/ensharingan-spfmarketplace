@@ -894,7 +894,7 @@ footer{background:var(--blue3);padding:2rem 1.5rem 1.25rem;margin-top:3rem}
           <div class="dash-avatar" id="dash-avatar">SP</div>
           <div class="dash-biz" id="dash-biz-name">My Business</div>
           <div class="dash-email" id="dash-email"></div>
-          <div class="dash-status">✓ Approved Seller</div>
+          <div class="dash-status" id="dash-status">Loading…</div>
         </div>
         <div class="dash-nav">
           <div class="dnav-item active" onclick="switchPanel('overview',this)"><span class="dnav-icon">📊</span>Overview</div>
@@ -1648,8 +1648,11 @@ const DEMO_ENQUIRIES = [
   {id:'REF-M4N5O6',listing_id:'p6',seller_id:'s1',buyer_name:'Chantelle Botha',buyer_phone:'+27 83 555 0505',buyer_email:'',message:'What is your best price if I take both shocks today cash?',created_at:new Date(Date.now()-86400000*5).toISOString(),status:'new',listings:{name:'Ford Ranger T6 Shock Absorbers'}},
 ];
 
-function getEnq() { return sellerEnquiries.length ? sellerEnquiries : DEMO_ENQUIRIES; }
-function getParts() { return myListings.length ? myListings : PARTS.slice(0, 5); }
+// A seller's dashboard must only ever show that seller's own data. Falling back
+// to demo leads or to other sellers' listings makes an empty account look active
+// and exposes stock that isn't theirs.
+function getEnq()   { return sellerEnquiries; }
+function getParts() { return myListings; }
 
 async function loadSellerData() {
   if (!user) return;
@@ -1660,7 +1663,14 @@ async function loadSellerData() {
   const { data: eq } = await sb.from('enquiries').select('*, listings(name)').eq('seller_id', sellerDbId).order('created_at', { ascending: false });
   sellerEnquiries = eq || [];
   const ids = myListings.map(l => l.id);
-  if (ids.length) { const { data: or } = await sb.from('orders').select('*').order('created_at', { ascending: false }); sellerOrders = or || []; }
+  sellerOrders = [];
+  if (ids.length) {
+    const { data: or } = await sb.from('orders').select('*').order('created_at', { ascending: false });
+    // Only keep orders that actually contain one of this seller's listings.
+    sellerOrders = (or || []).filter(o =>
+      Array.isArray(o.listing_ids) && o.listing_ids.some(id => ids.includes(id))
+    );
+  }
 }
 
 function updateDashboard() {
@@ -1672,6 +1682,28 @@ function updateDashboard() {
   document.getElementById('dash-biz-name').textContent = biz;
   document.getElementById('dash-email').textContent = user?.email || '';
   document.getElementById('dash-avatar').textContent = biz.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+
+  // Status badge reflects the seller record, not a hardcoded label
+  const st = (sellerProfile.status || 'pending').toLowerCase();
+  const isPrivate = (sellerProfile.seller_type || 'business') === 'private';
+  const badge = document.getElementById('dash-status');
+  if (badge) {
+    const labels = {
+      approved:  '✓ Approved Seller',
+      pending:   '⏳ Awaiting Approval',
+      suspended: '⚠️ Account Suspended',
+      banned:    '⚠️ Account Suspended'
+    };
+    badge.textContent = (labels[st] || '⏳ Awaiting Approval')
+      + (isPrivate && st === 'approved' ? ' · Private' : '');
+    badge.style.background = st === 'approved' ? '' : 'rgba(255,255,255,.18)';
+    badge.style.color = st === 'approved' ? '' : '#fff';
+  }
+
+  // Bulk upload is for approved sellers only
+  const bulkNav = [...document.querySelectorAll('.dnav-item')]
+    .find(el => (el.getAttribute('onclick') || '').includes("switchPanel('bulk'"));
+  if (bulkNav) bulkNav.style.display = st === 'approved' ? '' : 'none';
 
   // Badges & stats
   document.getElementById('dnb-listings').textContent = parts.length;
