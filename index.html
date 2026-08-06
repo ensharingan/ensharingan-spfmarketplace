@@ -9,6 +9,7 @@
 <script>
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
+  gtag('consent', 'default', { analytics_storage: 'denied', ad_storage: 'denied' });
   gtag('js', new Date());
   gtag('config', 'G-NG9QGJNP9N');
 </script>
@@ -24,6 +25,17 @@
 <meta property="og:url" content="https://marketplace.sparepartsfinder.co.za/">
 <meta property="og:locale" content="en_ZA">
 <meta name="twitter:card" content="summary_large_image">
+
+<!-- PWA / Android app -->
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#1e5bb0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Spare Parts">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script defer src="/vehicles.js"></script>
@@ -235,6 +247,13 @@ nav{background:var(--blue);padding:0 1.5rem;display:flex;align-items:center;gap:
 .shop-btn.wa{background:#25d366;border-color:#25d366}
 .shop-link{background:none;border:none;padding:0;font:inherit;color:var(--blue);cursor:pointer;font-weight:600;text-decoration:underline}
 .priv-tag{display:inline-flex;align-items:center;gap:4px;background:var(--bg2);border:1px solid var(--border2);color:var(--text2);border-radius:20px;padding:2px 9px;font-family:var(--font-h);font-size:9.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+#cookie-bar{position:fixed;left:0;right:0;bottom:0;z-index:400;background:#0f2444;color:#fff;padding:.9rem 1.1rem;display:none;align-items:center;gap:14px;flex-wrap:wrap;box-shadow:0 -4px 22px rgba(0,0,0,.25)}
+#cookie-bar.show{display:flex}
+#cookie-bar p{margin:0;font-size:12.5px;line-height:1.55;flex:1 1 300px;color:rgba(255,255,255,.85)}
+#cookie-bar a{color:#ffdd44}
+#cookie-bar button{font-family:var(--font-h);font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border:none;border-radius:var(--r);padding:9px 18px;cursor:pointer}
+#cookie-ok{background:var(--red);color:#fff}
+#cookie-no{background:transparent;border:1px solid rgba(255,255,255,.45);color:#fff}
 .card-price-poa{font-size:15px!important;letter-spacing:.01em;color:var(--blue)}
 .bw-hd{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:1rem}
 .bw-ttl{font-family:var(--font-h);font-size:20px;font-weight:900;text-transform:uppercase;letter-spacing:.01em;color:var(--text);line-height:1.1}
@@ -1147,6 +1166,13 @@ footer{background:var(--blue3);padding:2rem 1.5rem 1.25rem;margin-top:3rem}
         <span class="footer-link" onclick="openAuth()">Seller Registration</span>
       </div>
       <div>
+        <div class="footer-col-title">Legal</div>
+        <a class="footer-link" href="/privacy">Privacy Policy</a>
+        <a class="footer-link" href="/terms">Terms of Use</a>
+        <a class="footer-link" href="/returns">Returns &amp; Refunds</a>
+        <a class="footer-link" href="/shipping">Delivery &amp; Collection</a>
+      </div>
+      <div>
         <div class="footer-col-title">Contact</div>
         <a class="footer-link" href="tel:+27615494504">📞 +27 61 549 4504</a>
         <a class="footer-link" href="https://wa.me/27739821553" target="_blank" rel="noopener">💬 +27 73 982 1553 (WhatsApp)</a>
@@ -1215,6 +1241,13 @@ footer{background:var(--blue3);padding:2rem 1.5rem 1.25rem;margin-top:3rem}
 </div>
 
 <!-- AUTH MODAL -->
+<div id="cookie-bar" role="region" aria-label="Cookie notice">
+  <p>We use cookies to keep you signed in and to understand how the marketplace is used.
+     See our <a href="/privacy">Privacy Policy</a>.</p>
+  <button id="cookie-no" onclick="setCookieChoice('no')">Essential only</button>
+  <button id="cookie-ok" onclick="setCookieChoice('yes')">Accept</button>
+</div>
+
 <!-- VIN DECODER MODAL -->
 <div class="overlay" id="modal-vin" onclick="closeOverlay('modal-vin',event)">
   <div class="modal" style="max-width:620px">
@@ -1499,6 +1532,7 @@ async function loadListings() {
   PARTS = all; filtered = [...PARTS];
   updateHeroStats();
   setFooterYear();
+  initCookieBar();
   setTimeout(openDeepLink,0);
   renderParts(filtered);
   syncBrowseMode();
@@ -1530,6 +1564,30 @@ function openDeepLink(){
   if(!m || typeof PARTS==='undefined') return;
   const p=PARTS.find(x=>String(x.id)===m[1]);
   if(p){ forceParts=true; openProduct(p.id); }
+}
+
+// POPIA: analytics cookies only run once the visitor has agreed.
+function cookieChoice(){
+  try { return localStorage.getItem('spf-cookie-consent'); } catch(e) { return null; }
+}
+function applyCookieChoice(c){
+  if (typeof gtag !== 'function') return;
+  gtag('consent', 'update', {
+    analytics_storage: c === 'yes' ? 'granted' : 'denied',
+    ad_storage: 'denied'
+  });
+}
+function setCookieChoice(c){
+  try { localStorage.setItem('spf-cookie-consent', c); } catch(e) {}
+  applyCookieChoice(c);
+  const bar = document.getElementById('cookie-bar');
+  if (bar) bar.classList.remove('show');
+}
+function initCookieBar(){
+  const c = cookieChoice();
+  if (c) { applyCookieChoice(c); return; }
+  const bar = document.getElementById('cookie-bar');
+  if (bar) setTimeout(() => bar.classList.add('show'), 1200);
 }
 
 function setFooterYear(){
@@ -3134,6 +3192,32 @@ wireUploadArea();
 wirePublicUpload();
 loadListings();
 checkSession();
+</script>
+<script>
+// Register the service worker so the site is installable and works offline.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').then(reg => {
+      // Take a new version as soon as it is available rather than on next launch
+      reg.addEventListener('updatefound', () => {
+        const sw = reg.installing;
+        if (!sw) return;
+        sw.addEventListener('statechange', () => {
+          if (sw.state === 'installed' && navigator.serviceWorker.controller) {
+            sw.postMessage('SKIP_WAITING');
+          }
+        });
+      });
+    }).catch(err => console.warn('SW registration failed:', err));
+
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (reloaded) return;
+      reloaded = true;
+      window.location.reload();
+    });
+  });
+}
 </script>
 </body>
 </html>
