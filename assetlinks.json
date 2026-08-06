@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "za.co.sparepartsfinder.marketplace.twa",
+      "sha256_cert_fingerprints": [
+        "10:88:A4:6C:FC:E3:A7:7B:AC:61:4F:0C:70:B4:02:18:CC:63:95:93:FD:1C:82:63:3B:90:35:BD:58:8B:99:FC"
+      ]
+    }
+  }
+]
