@@ -1,0 +1,96 @@
+{
+  "id": "/",
+  "name": "Spare Parts Finder \u2014 Marketplace",
+  "short_name": "Spare Parts",
+  "description": "South Africa's trusted marketplace for new, used and salvage vehicle spare parts. Search by part, brand or VIN and buy direct from verified local sellers.",
+  "start_url": "/?src=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "portrait",
+  "background_color": "#1e5bb0",
+  "theme_color": "#1e5bb0",
+  "lang": "en-ZA",
+  "dir": "ltr",
+  "categories": [
+    "shopping",
+    "business"
+  ],
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Browse parts",
+      "short_name": "Browse",
+      "url": "/?src=shortcut",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "List a part",
+      "short_name": "Sell",
+      "url": "/?src=shortcut#list",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/icons/screenshot-1.png",
+      "sizes": "1080x1966",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Search for any part, or decode your VIN"
+    },
+    {
+      "src": "/icons/screenshot-2.png",
+      "sizes": "1080x2121",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Thousands of parts from verified South African sellers"
+    },
+    {
+      "src": "/icons/screenshot-3.png",
+      "sizes": "1080x1966",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Browse, list a part, or manage your shop"
+    }
+  ]
+}
