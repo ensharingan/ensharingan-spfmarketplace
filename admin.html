@@ -314,9 +314,18 @@ textarea{resize:vertical;min-height:80px}
           </div>
         </div>
         <table id="listings-table">
-          <caption style="caption-side:top;text-align:left;padding:0 0 10px"><div id="listing-filter-bar" style="display:flex;gap:6px;flex-wrap:wrap"></div></caption>
-          <thead><tr><th>Part Name</th><th>Seller</th><th>Category</th><th>Price</th><th>Status</th><th>Listed</th><th>Actions</th></tr></thead>
-          <tbody id="listings-tbody"><tr><td colspan="7" style="text-align:center;padding:1.5rem;color:var(--text3)">Loading listings…</td></tr></tbody>
+          <caption style="caption-side:top;text-align:left;padding:0 0 10px">
+            <div id="listing-filter-bar" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+            <div id="lsel-bar" style="display:none;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;background:var(--blue);color:#fff;border-radius:8px;padding:9px 12px">
+              <span id="lsel-count" style="font-weight:600;font-size:13px"></span>
+              <button class="btn btn-approve" onclick="bulkListings('active')">✓ Activate</button>
+              <button class="btn btn-suspend" onclick="bulkListings('inactive')">Deactivate</button>
+              <button class="btn btn-delete" onclick="bulkListings('delete')">Delete</button>
+              <button class="btn" onclick="clearListingSelection()" style="background:transparent;border:1px solid rgba(255,255,255,.5);color:#fff">Clear</button>
+            </div>
+          </caption>
+          <thead><tr><th style="width:34px"><input type="checkbox" id="lsel-all" onclick="toggleSelectAllListings(this)" title="Select all shown"></th><th>Part Name</th><th>Seller</th><th>Category</th><th>Price</th><th>Status</th><th>Listed</th><th>Actions</th></tr></thead>
+          <tbody id="listings-tbody"><tr><td colspan="8" style="text-align:center;padding:1.5rem;color:var(--text3)">Loading listings…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -1006,6 +1015,78 @@ async function approveAllPending() {
   showToast(ids.length + ' listings approved ✓');
 }
 
+// ══════════════════════════════════════════════════════════════
+//  BULK SELECT
+// ══════════════════════════════════════════════════════════════
+const selectedListings = new Set();
+
+function visibleListingBoxes(){ return [...document.querySelectorAll('#listings-tbody .lsel')]; }
+
+function onListingSelect(){
+  visibleListingBoxes().forEach(cb => {
+    if (cb.checked) selectedListings.add(cb.value);
+    else selectedListings.delete(cb.value);
+  });
+  const n = selectedListings.size;
+  const bar = document.getElementById('lsel-bar');
+  const cnt = document.getElementById('lsel-count');
+  if (bar) bar.style.display = n ? 'flex' : 'none';
+  if (cnt) cnt.textContent = n + (n === 1 ? ' listing selected' : ' listings selected');
+  const all = document.getElementById('lsel-all');
+  const boxes = visibleListingBoxes();
+  if (all) {
+    const checked = boxes.filter(b => b.checked).length;
+    all.checked = boxes.length > 0 && checked === boxes.length;
+    all.indeterminate = checked > 0 && checked < boxes.length;
+  }
+}
+
+function toggleSelectAllListings(el){
+  visibleListingBoxes().forEach(cb => { cb.checked = el.checked; });
+  onListingSelect();
+}
+
+function clearListingSelection(){
+  selectedListings.clear();
+  visibleListingBoxes().forEach(cb => { cb.checked = false; });
+  onListingSelect();
+}
+
+async function bulkListings(action){
+  const ids = [...selectedListings];
+  if (!ids.length) return;
+
+  const verb = action === 'delete' ? 'permanently delete' : action === 'active' ? 'activate' : 'deactivate';
+  if (!confirm(`Are you sure you want to ${verb} ${ids.length} listing${ids.length===1?'':'s'}?` +
+               (action === 'delete' ? '\n\nThis cannot be undone.' : ''))) return;
+
+  const bar = document.getElementById('lsel-count');
+  const CHUNK = 200;                       // keep each request comfortably small
+  let done = 0, failed = 0;
+
+  for (let i = 0; i < ids.length; i += CHUNK) {
+    const slice = ids.slice(i, i + CHUNK);
+    if (bar) bar.textContent = `Working… ${done}/${ids.length}`;
+    let error;
+    if (action === 'delete') {
+      ({ error } = await sb.from('listings').delete().in('id', slice));
+    } else {
+      // clearing hidden_reason so a re-activated listing isn't re-hidden later
+      ({ error } = await sb.from('listings')
+        .update(action === 'active' ? { status: 'active', hidden_reason: null } : { status: 'inactive' })
+        .in('id', slice));
+    }
+    if (error) { failed += slice.length; console.error('Bulk action failed:', error); }
+    else done += slice.length;
+  }
+
+  logAudit('Bulk ' + verb, ids.length + ' listings');
+  clearListingSelection();
+  await loadAllData();
+  showToast(failed ? `${done} updated, ${failed} failed` : `${done} listing${done===1?'':'s'} ${action==='delete'?'deleted':action==='active'?'activated':'deactivated'} ✓`,
+            failed ? '' : 'success');
+}
+
 function renderListings() {
   const pendCount = allListings.filter(l => l.status === 'pending').length;
   const bar = document.getElementById('listing-filter-bar');
@@ -1022,6 +1103,7 @@ function renderListings() {
 
   document.getElementById('listings-tbody').innerHTML = rows.length
     ? rows.map(l => `<tr>
+        <td><input type="checkbox" class="lsel" value="${l.id}" onclick="onListingSelect()" ${selectedListings.has(l.id)?'checked':''}></td>
         <td class="cell-bold">${esc(l.name)}</td>
         <td style="font-size:12px">${esc(l.sellers?.business_name||'—')}</td>
         <td style="font-size:12px">${esc(l.category||'—')}</td>
@@ -1034,7 +1116,8 @@ function renderListings() {
           <button class="btn btn-delete" onclick="deleteListing('${l.id}','${esc(l.name)}')">Delete</button>
         </div></td>
       </tr>`).join('')
-    : '<tr><td colspan="7" style="text-align:center;padding:1.5rem;color:var(--text3)">No listings found</td></tr>';
+    : '<tr><td colspan="8" style="text-align:center;padding:1.5rem;color:var(--text3)">No listings found</td></tr>';
+  onListingSelect();
 }
 
 
