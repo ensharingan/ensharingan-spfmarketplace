@@ -1,30 +1,57 @@
 {
-  "name": "Spare Parts Finder",
-  "short_name": "SPF Marketplace",
-  "description": "South Africa's trusted auto spare parts marketplace. Buy and sell new, used and salvage vehicle parts from verified local sellers.",
-  "start_url": "/",
+  "id": "/",
+  "name": "Spare Parts Finder — Marketplace",
+  "short_name": "Spare Parts",
+  "description": "South Africa's trusted marketplace for new, used and salvage vehicle spare parts. Search by part, brand or VIN and buy direct from verified local sellers.",
+  "start_url": "/?src=pwa",
+  "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait",
   "background_color": "#1e5bb0",
   "theme_color": "#1e5bb0",
   "lang": "en-ZA",
-  "scope": "/",
+  "dir": "ltr",
+  "categories": ["shopping", "business"],
+  "prefer_related_applications": false,
   "icons": [
     {
-      "src": "https://res.cloudinary.com/dnr82g2yo/image/upload/Untitled_1080_x_1080_px_ojvxhe.png",
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "https://res.cloudinary.com/dnr82g2yo/image/upload/Untitled_1080_x_1080_px_ojvxhe.png",
+      "src": "/icons/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
     }
   ],
-  "categories": [
-    "shopping",
-    "automotive"
+  "shortcuts": [
+    {
+      "name": "Browse parts",
+      "short_name": "Browse",
+      "url": "/?src=shortcut",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "List a part",
+      "short_name": "Sell",
+      "url": "/?src=shortcut#list",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
   ]
 }
