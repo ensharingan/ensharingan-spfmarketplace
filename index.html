@@ -104,7 +104,11 @@ nav{background:var(--blue);padding:0 1.5rem;display:flex;align-items:center;gap:
 .sign-btn:hover{background:var(--red2)}
 
 /* ══ HERO ══ */
-.hero{background:linear-gradient(135deg,var(--blue) 0%,#2568c4 50%,var(--blue2) 100%);padding:3.5rem 1.5rem 2.75rem;position:relative;overflow:hidden}
+.hero{background:linear-gradient(135deg,var(--blue) 0%,#2568c4 50%,var(--blue2) 100%);padding:1.5rem 1.5rem 2rem;position:relative;overflow:hidden}
+.hero-banner{display:block;border-radius:var(--rxl);overflow:hidden;box-shadow:var(--shadow-lg);line-height:0;margin-bottom:1.25rem;transition:transform .16s,box-shadow .16s}
+.hero-banner:hover{transform:translateY(-2px)}
+.hero-banner img{width:100%;height:auto;display:block}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .hero::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");pointer-events:none}
 .hero-inner{max-width:1200px;margin:0 auto;position:relative;z-index:1}
 .hero-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:20px;padding:4px 14px;font-family:var(--font-h);font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.85);margin-bottom:1rem}
@@ -113,10 +117,11 @@ nav{background:var(--blue);padding:0 1.5rem;display:flex;align-items:center;gap:
 .hero-sub{font-size:15px;font-weight:300;color:rgba(255,255,255,.78);margin-bottom:2rem;max-width:560px}
 
 /* search */
-.search-card{background:#fff;border-radius:var(--rxl);box-shadow:var(--shadow-lg);padding:1rem;max-width:820px}
+.search-card{background:#fff;border-radius:var(--rxl);box-shadow:var(--shadow-lg);padding:1rem}
 .search-row{display:grid;grid-template-columns:1fr auto auto auto auto;gap:6px;align-items:center}
 .search-input-wrap{position:relative}
-.search-input-wrap svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;fill:var(--text3)}
+.search-input-wrap svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:16px;height:16px;fill:none;color:var(--text3);pointer-events:none;z-index:2}
+.search-input-wrap input.search-main{padding:11px 12px 11px 42px}
 .search-main{width:100%;border:1.5px solid var(--border);border-radius:var(--r);padding:10px 12px 10px 36px;font-family:var(--font-b);font-size:14px;color:var(--text);outline:none;transition:border-color .15s;background:var(--bg2)}
 .search-main:focus{border-color:var(--blue);background:#fff}
 .search-select{border:1.5px solid var(--border);border-radius:var(--r);padding:10px 12px;font-family:var(--font-b);font-size:13px;color:var(--text2);background:var(--bg2);outline:none;cursor:pointer;appearance:none;transition:border-color .15s;min-width:130px}
@@ -197,11 +202,7 @@ nav{background:var(--blue);padding:0 1.5rem;display:flex;align-items:center;gap:
 /* ══ VIN DECODER ══ */
 .vin-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:.7rem;padding-top:.7rem;border-top:1px solid var(--border)}
 /* ══ HERO VIN PANEL ══ */
-.hero-est{display:flex;align-items:center;gap:10px;margin-bottom:.9rem}
-.hero-est-yr{font-family:var(--font-h);font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#ffdd44}
-.hero-est-rule{height:1px;flex:0 0 34px;background:rgba(255,221,68,.55)}
-.hero-est-txt{font-family:var(--font-h);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.7)}
-.vinp{max-width:820px;margin-top:14px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.22);border-radius:var(--rxl);padding:1.15rem 1.25rem;backdrop-filter:blur(3px)}
+.vinp{margin-top:14px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.22);border-radius:var(--rxl);padding:1.15rem 1.25rem;backdrop-filter:blur(3px)}
 .vinp-top{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:.75rem}
 .vinp-ttl{font-family:var(--font-h);font-size:17px;font-weight:900;letter-spacing:.02em;text-transform:uppercase;color:#fff}
 .vinp-sub{font-size:12.5px;color:rgba(255,255,255,.72)}
@@ -217,11 +218,6 @@ nav{background:var(--blue);padding:0 1.5rem;display:flex;align-items:center;gap:
 .vinp-go:disabled{opacity:.45;cursor:not-allowed}
 .vinp-hint{font-size:11.5px;color:rgba(255,255,255,.6);margin-top:.65rem;line-height:1.5}
 /* ══ BRAND WALL ══ */
-.sell-band{display:block;max-width:1200px;margin:0 auto;padding:1.5rem 1.5rem 0}
-.sell-band a{display:block;border-radius:var(--rl);overflow:hidden;box-shadow:var(--shadow);transition:transform .16s,box-shadow .16s;line-height:0}
-.sell-band a:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
-.sell-band img{width:100%;height:auto;display:block}
-@media(max-width:700px){.sell-band{padding:1rem 1rem 0}}
 /* ══ SHOPS ══ */
 .shop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
 .shop-card{background:#fff;border:1.5px solid var(--border);border-radius:var(--rl);padding:1.1rem;cursor:pointer;text-align:left;transition:border-color .14s,transform .14s,box-shadow .14s}
@@ -275,7 +271,7 @@ nav{background:var(--blue);padding:0 1.5rem;display:flex;align-items:center;gap:
 .crumb-back:hover{text-decoration:underline}
 .crumb-now{font-family:var(--font-h);font-size:15px;font-weight:900;text-transform:uppercase;color:var(--text)}
 @media(max-width:700px){.bw-grid{grid-template-columns:repeat(auto-fill,minmax(132px,1fr))}.bw-mark{font-size:26px}}
-@media(max-width:700px){.vinp-row{grid-template-columns:1fr}.vinp-in{font-size:16px;letter-spacing:.14em;padding-right:66px}.hero-est-rule{flex-basis:20px}}
+@media(max-width:700px){.vinp-row{grid-template-columns:1fr}.vinp-in{font-size:16px;letter-spacing:.14em;padding-right:66px}}
 .vin-bar-txt{font-size:12px;color:var(--text3)}
 .vin-link{background:none;border:none;font-family:var(--font-h);font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--blue);cursor:pointer;padding:0;display:inline-flex;align-items:center;gap:5px}
 .vin-link:hover{text-decoration:underline}
@@ -515,7 +511,7 @@ footer{background:var(--blue3);padding:2rem 1.5rem 1.25rem;margin-top:3rem}
 
 /* ══ RESPONSIVE ══ */
 @media(max-width:1000px){.browse-layout{grid-template-columns:1fr}.sidebar{display:none}.stat-row{grid-template-columns:1fr 1fr}.chart-grid{grid-template-columns:1fr}.dash-layout{grid-template-columns:1fr}.dash-sidebar{position:static}}
-@media(max-width:700px){.hero{padding:2.25rem 1rem 2rem}.main{padding:1rem}.search-row{grid-template-columns:1fr}.search-select{display:none}.modal-grid{grid-template-columns:1fr}.form-2{grid-template-columns:1fr}.add-grid{grid-template-columns:1fr}.prof-grid{grid-template-columns:1fr}.contact-layout{grid-template-columns:1fr}.footer-top{grid-template-columns:1fr}}
+@media(max-width:700px){.hero{padding:1rem 1rem 1.5rem}.hero-banner{margin-bottom:1rem}.main{padding:1rem}.search-row{grid-template-columns:1fr}.search-select{display:none}.modal-grid{grid-template-columns:1fr}.form-2{grid-template-columns:1fr}.add-grid{grid-template-columns:1fr}.prof-grid{grid-template-columns:1fr}.contact-layout{grid-template-columns:1fr}.footer-top{grid-template-columns:1fr}}
 @media(max-width:768px){.topbar{display:none}.nav-tabs{display:none}.nav-right{display:none}.hamburger{display:flex}.logo-line2{display:none}}
 @media(max-width:500px){.logo-line2{display:none}}
 </style>
@@ -595,13 +591,14 @@ footer{background:var(--blue3);padding:2rem 1.5rem 1.25rem;margin-top:3rem}
 <!-- HERO -->
 <div class="hero">
   <div class="hero-inner">
-    <div class="hero-est">
-      <span class="hero-est-yr">Since 2019</span>
-      <span class="hero-est-rule"></span>
-      <span class="hero-est-txt">The marketplace is now open</span>
-    </div>
-    <h1>Seven Years Finding Parts.<br><span class="red">Now Search Them All.</span></h1>
-    <p class="hero-sub">Since 2019 we've tracked down hard-to-find parts for South African drivers one phone call at a time. Every seller we trust is now in one place — new, used and salvage, delivered nationwide or collected in person.</p>
+    <h1 class="sr-only">Spare Parts Finder — South African auto spare parts marketplace</h1>
+    <a class="hero-banner" href="#" onclick="gotoView('list',null);return false" aria-label="List your parts on the Spare Parts Finder marketplace">
+      <img src="/assets/sell-banner.jpg"
+           srcset="/assets/sell-banner-sm.jpg 900w, /assets/sell-banner.jpg 1600w"
+           sizes="(max-width:900px) 100vw, 1200px"
+           alt="Need to sell some parts? List your new, used or salvage parts on the marketplace and reach buyers across South Africa."
+           width="1600" height="685" fetchpriority="high" decoding="async">
+    </a>
     <div class="search-card">
       <div class="search-row">
         <div class="search-input-wrap">
@@ -644,16 +641,6 @@ footer{background:var(--blue3);padding:2rem 1.5rem 1.25rem;margin-top:3rem}
 <div class="main">
 
 <!-- BROWSE VIEW -->
-<div class="sell-band">
-  <a href="#" onclick="gotoView('list',null);return false" aria-label="List your parts on the Spare Parts Finder marketplace">
-    <img src="/assets/sell-banner.jpg"
-         srcset="/assets/sell-banner-sm.jpg 900w, /assets/sell-banner.jpg 1600w"
-         sizes="(max-width:900px) 100vw, 1200px"
-         alt="Need to sell some parts? List your new, used or salvage parts on the marketplace and reach buyers across South Africa."
-         width="1600" height="685" loading="lazy" decoding="async">
-  </a>
-</div>
-
 <div id="view-browse" class="view active">
   <div class="browse-layout">
     <!-- Sidebar -->
@@ -2581,7 +2568,7 @@ let forceParts=false;
 function filtersActive(){
   const v=id=>(document.getElementById(id)?.value||'').trim();
   return !!(v('main-search')||v('qs-make')||v('qs-model')||v('qs-year')||
-            v('f-cond')||v('f-pmin')||v('f-pmax')||v('f-ship')||activeCat);
+            v('f-cond')||v('f-pmin')||v('f-pmax')||v('f-ship')||v('f-province')||activeCat);
 }
 
 function syncBrowseMode(){
@@ -2601,25 +2588,107 @@ function syncBrowseMode(){
   }
 }
 
+let currentSort = 'newest';
+
+// Supabase can hand back text[] columns as '{Collection,Courier}' rather than a
+// real array, which silently broke the shipping filter.
+function shipList(p){
+  const s = p && p.shipping_options;
+  if (Array.isArray(s)) return s;
+  if (typeof s === 'string'){
+    try { const j = JSON.parse(s); if (Array.isArray(j)) return j; } catch(e){}
+    return s.replace(/^[{[]|[}\]]$/g,'').split(',').map(x=>x.replace(/^"|"$/g,'').trim()).filter(Boolean);
+  }
+  return [];
+}
+
+const SA_PROVINCES = ['Gauteng','Western Cape','KwaZulu-Natal','Eastern Cape','Limpopo','Mpumalanga','North West','Free State','Northern Cape'];
+const PROV_ABBR = {gp:'Gauteng',gau:'Gauteng',wc:'Western Cape',kzn:'KwaZulu-Natal',ec:'Eastern Cape',lp:'Limpopo',mp:'Mpumalanga',nw:'North West',fs:'Free State',nc:'Northern Cape'};
+const PROV_CITY = {
+  'johannesburg':'Gauteng','joburg':'Gauteng','jhb':'Gauteng','randburg':'Gauteng','sandton':'Gauteng',
+  'pretoria':'Gauteng','centurion':'Gauteng','midrand':'Gauteng','roodepoort':'Gauteng','kempton':'Gauteng',
+  'benoni':'Gauteng','boksburg':'Gauteng','germiston':'Gauteng','krugersdorp':'Gauteng','alberton':'Gauteng',
+  'soweto':'Gauteng','springs':'Gauteng','vereeniging':'Gauteng','vanderbijl':'Gauteng','kya sand':'Gauteng',
+  'cape town':'Western Cape','bellville':'Western Cape','stellenbosch':'Western Cape','paarl':'Western Cape',
+  'somerset west':'Western Cape','george':'Western Cape','worcester':'Western Cape',
+  'durban':'KwaZulu-Natal','pietermaritzburg':'KwaZulu-Natal','pinetown':'KwaZulu-Natal',
+  'umhlanga':'KwaZulu-Natal','richards bay':'KwaZulu-Natal','ballito':'KwaZulu-Natal','newcastle':'KwaZulu-Natal',
+  'port elizabeth':'Eastern Cape','gqeberha':'Eastern Cape','east london':'Eastern Cape',
+  'uitenhage':'Eastern Cape','mthatha':'Eastern Cape',
+  'polokwane':'Limpopo','tzaneen':'Limpopo','mokopane':'Limpopo','thohoyandou':'Limpopo',
+  'nelspruit':'Mpumalanga','mbombela':'Mpumalanga','witbank':'Mpumalanga','emalahleni':'Mpumalanga',
+  'middelburg':'Mpumalanga','secunda':'Mpumalanga',
+  'rustenburg':'North West','potchefstroom':'North West','klerksdorp':'North West','brits':'North West','mahikeng':'North West',
+  'bloemfontein':'Free State','welkom':'Free State','bethlehem':'Free State','sasolburg':'Free State',
+  'kimberley':'Northern Cape','upington':'Northern Cape','springbok':'Northern Cape'
+};
+
+// Listings store a town, not a province — map it so the Province filter works.
+function partProvince(p){
+  const raw = String((p && (p.province || p.location)) || '').toLowerCase().trim();
+  if (!raw) return '';
+  for (const pv of SA_PROVINCES) if (raw.includes(pv.toLowerCase())) return pv;
+  for (const city in PROV_CITY) if (raw.includes(city)) return PROV_CITY[city];
+  const toks = raw.split(/[^a-z]+/).filter(Boolean);
+  for (const t of toks) if (PROV_ABBR[t]) return PROV_ABBR[t];
+  return '';
+}
+
+function sortFiltered(){
+  if (currentSort === 'price-low')       filtered.sort((a,b)=>(Number(a.price)||0)-(Number(b.price)||0));
+  else if (currentSort === 'price-high') filtered.sort((a,b)=>(Number(b.price)||0)-(Number(a.price)||0));
+  else filtered.sort((a,b)=> new Date(b.created_at||0) - new Date(a.created_at||0));
+}
+
 function applyFilters() {
-  const q=document.getElementById('main-search').value.toLowerCase();
-  const make=document.getElementById('qs-make').value;
-  const model=document.getElementById('qs-model').value;
-  const year=parseInt(document.getElementById('qs-year').value)||0;
-  const cond=document.getElementById('f-cond')?.value||'';
-  const pmin=parseFloat(document.getElementById('f-pmin')?.value)||0;
-  const pmax=parseFloat(document.getElementById('f-pmax')?.value)||Infinity;
-  const ship=document.getElementById('f-ship')?.value||'';
+  const val = id => (document.getElementById(id)?.value || '').trim();
+  const eq  = (a,b) => String(a||'').trim().toLowerCase() === String(b||'').trim().toLowerCase();
+
+  const q     = val('main-search').toLowerCase();
+  const make  = val('qs-make'), model = val('qs-model');
+  const year  = parseInt(val('qs-year')) || 0;
+  const cond  = val('f-cond'), ship = val('f-ship'), prov = val('f-province');
+  const pmin  = parseFloat(val('f-pmin')), pmax = parseFloat(val('f-pmax'));
+  const hasMin = !isNaN(pmin), hasMax = !isNaN(pmax);
+  const terms = q ? q.split(/\s+/).filter(Boolean) : [];
+
   filtered = PARTS.filter(p => {
-    const hay=(p.name+' '+p.description+' '+p.sku+' '+p.make+' '+p.model+' '+p.category+' '+(p.body_code||'')+' '+(p.engine_code||'')+' '+(p.variant||'')).toLowerCase();
-    const mq=!q||q.split(/\s+/).filter(Boolean).every(t=>hay.includes(t));
-    const eq=(a,b)=>String(a||'').trim().toLowerCase()===String(b||'').trim().toLowerCase();
-    const mm=!make||eq(p.make,make); const mo=!model||eq(p.model,model);
-    const my=!year||(year>=(p.year_start||0)&&year<=(p.year_end||9999));
-    const mc=!activeCat||eq(p.category,activeCat); const mco=!cond||eq(p.condition,cond);
-    const mp=p.price>=pmin&&p.price<=pmax; const ms=!ship||(p.shipping_options||[]).includes(ship);
-    return mq&&mm&&mo&&my&&mc&&mco&&mp&&ms;
+    if (terms.length){
+      const hay = [p.name,p.description,p.sku,p.make,p.model,p.category,p.body_code,p.engine_code,p.variant,p.location]
+        .filter(Boolean).join(' ').toLowerCase();
+      if (!terms.every(t => hay.includes(t))) return false;
+    }
+    if (make  && !eq(p.make, make))   return false;
+    if (model && !eq(p.model, model)) return false;
+    if (year){
+      const ys = parseInt(p.year_start) || 0;
+      const ye = parseInt(p.year_end) || 9999;
+      if (ys && (year < ys || year > ye)) return false;
+    }
+    if (activeCat && !eq(p.category, activeCat)) return false;
+    if (cond){
+      const c = String(p.condition||'').toLowerCase(), w = cond.toLowerCase();
+      const ok = c === w
+        || (w.indexOf('damaged') === 0 && /(damag|salvage|strip)/.test(c))
+        || (w === 'used' && c.indexOf('used') === 0)
+        || (w === 'new'  && c.indexOf('new')  === 0);
+      if (!ok) return false;
+    }
+    if (hasMin || hasMax){
+      const pr = Number(p.price) || 0;
+      if (!pr) return false;                     // POA listings drop out of a price range
+      if (hasMin && pr < pmin) return false;
+      if (hasMax && pr > pmax) return false;
+    }
+    if (ship){
+      const so = shipList(p).map(x => String(x).toLowerCase());
+      if (!so.some(x => x.includes(ship.toLowerCase()))) return false;
+    }
+    if (prov && partProvince(p) !== prov) return false;
+    return true;
   });
+
+  sortFiltered();
   renderParts(filtered);
   syncBrowseMode();
 }
@@ -3025,7 +3094,7 @@ function resetFilters(){
   filtered=[...PARTS]; renderParts(filtered); syncBrowseMode();
 }
 
-function sortResults(v){const s=[...filtered];if(v==='price-low')s.sort((a,b)=>a.price-b.price);else if(v==='price-high')s.sort((a,b)=>b.price-a.price);renderParts(s);}
+function sortResults(v){ currentSort = v; applyFilters(); }
 
 // Salvage and stripping stock is often negotiable — showing "R 0" reads as a
 // bug, so price-less listings invite an enquiry instead.
@@ -3138,7 +3207,14 @@ function populateDropdowns() {
 function updateQsModels(){
   const make=document.getElementById('qs-make').value, sel=document.getElementById('qs-model');
   sel.innerHTML='<option value="">All Models</option>';
-  vehModels(make).forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;sel.appendChild(o);});
+  // Offer the models we actually stock for this make — the fitment DB lists
+  // models that never match a listing, so the filter returned nothing.
+  const inStock=[...new Set(PARTS
+    .filter(p=>String(p.make||'').trim().toLowerCase()===make.toLowerCase())
+    .map(p=>String(p.model||'').trim()).filter(Boolean))].sort();
+  (inStock.length?inStock:vehModels(make)).forEach(m=>{
+    const o=document.createElement('option');o.value=m;o.textContent=m;sel.appendChild(o);
+  });
   applyFilters();
 }
 
