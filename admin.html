@@ -1231,7 +1231,10 @@ function renderInvoices() {
 // ══════════════════════════════════════════════════════════════
 async function approveSeller(id, name) {
   openConfirmModal('Approve Seller', `Approve <strong>${name}</strong> as a verified seller? They will be notified and their listings will go live.`, 'btn-approve', async () => {
-    await sb.from('sellers').update({ status: 'approved', sub_status: 'trial' }).eq('id', id);
+    const { data, error } = await sb.from('sellers')
+      .update({ status: 'approved', sub_status: 'trial' }).eq('id', id).select();
+    if (error) { showToast('Could not approve: ' + error.message, 'error'); return; }
+    if (!data || !data.length) { showToast('No row updated — check admin permissions.', 'error'); return; }
     logAudit('Seller Approved', name);
     await loadAllData();
     showToast(name + ' approved ✓', 'success');
@@ -1412,13 +1415,19 @@ function showPage(page, el) {
   if (el) el.classList.add('active');
 }
 
-function openConfirmModal(title, body, btnClass, action) {
+function openConfirmModal(title, body, a, b) {
+  // Callers have used both (class, action) and (action, class) orders, which left
+  // modalAction holding a string and threw "modalAction is not a function" on
+  // Confirm. Pick each argument by type instead of by position.
+  const action   = typeof a === 'function' ? a : (typeof b === 'function' ? b : null);
+  const btnClass = typeof a === 'string'   ? a : (typeof b === 'string'   ? b : 'btn-primary');
   modalAction = action;
   document.getElementById('modal-title').textContent = title;
   document.getElementById('modal-body').innerHTML = `<p style="font-size:14px;color:var(--text2);line-height:1.65">${body}</p>`;
   const btn = document.getElementById('modal-confirm-btn');
   btn.className = 'btn ' + btnClass;
   btn.textContent = 'Confirm';
+  btn.disabled = false;
   document.getElementById('action-modal').classList.add('open');
 }
 
@@ -1428,7 +1437,16 @@ function closeModal() {
 }
 
 async function executeModalAction() {
-  if (modalAction) { closeModal(); await modalAction(); }
+  if (typeof modalAction !== 'function') {
+    console.error('No confirm action was attached to this modal.', modalAction);
+    showToast('Something went wrong — please reload the page.', 'error');
+    closeModal();
+    return;
+  }
+  const fn = modalAction;
+  closeModal();
+  try { await fn(); }
+  catch (e) { console.error(e); showToast('Action failed: ' + (e.message || e), 'error'); }
 }
 
 function filterTable(tableId, query) {
