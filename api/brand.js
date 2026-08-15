@@ -1,25 +1,61 @@
-import { sbSelect, esc, partUrl, hasPrice, money, SITE } from './_lib.js';
+import { sbSelect, esc, partUrl, hasPrice, money, slugify, SITE } from './_lib.js';
 
 export default async function handler(req, res) {
   try {
-    const raw = decodeURIComponent((req.query.make || '').toString()).replace(/-/g, ' ').trim();
-    if (!raw) { res.setHeader('Location', '/'); return res.status(302).end(); }
+    const param = decodeURIComponent((req.query.make || '').toString()).trim();
+    if (!param) { res.setHeader('Location', '/'); return res.status(302).end(); }
 
+    // One canonical URL form per make. Anything else (%20 spaces, odd casing)
+    // is a permanent redirect so crawl budget isn't split across variants.
+    const slug = slugify(param);
+    if (!slug) { res.setHeader('Location', '/'); return res.status(302).end(); }
+    if (param !== slug) {
+      res.setHeader('Cache-Control', 'public, s-maxage=86400');
+      res.setHeader('Location', `/brand/${slug}`);
+      return res.status(301).end();
+    }
+
+    // Resolve the slug back to the make values actually stored on listings.
+    // Matching on the slug (not the raw string) is what makes hyphenated and
+    // multi-word makes — Mercedes-Benz, Land Rover — resolve at all.
+    const makeRows = await sbSelect('listings?status=eq.active&select=make&limit=10000');
+    const allMakes = [...new Set(
+      makeRows.map(r => String(r.make || '').trim()).filter(m => m && m.toLowerCase() !== 'other')
+    )];
+    const variants = allMakes.filter(m => slugify(m) === slug);
+
+    if (!variants.length) {
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('Cache-Control', 'public, s-maxage=3600');
+      return res.status(404).send(`<!DOCTYPE html><html lang="en-ZA"><head><meta charset="utf-8">
+<title>No ${esc(param)} parts | Spare Parts Finder</title><meta name="robots" content="noindex,follow">
+</head><body><h1>No ${esc(param)} parts listed right now</h1>
+<p><a href="/">Browse the marketplace →</a></p></body></html>`);
+    }
+
+    const inList = '(' + variants.map(v => '"' + v.replace(/"/g, '') + '"').join(',') + ')';
     const rows = await sbSelect(
-      `listings?status=eq.active&make=ilike.${encodeURIComponent(raw)}` +
+      `listings?status=eq.active&make=in.${encodeURIComponent(inList)}` +
       `&select=id,name,make,model,category,condition,price,images,year_start,year_end,location` +
       `&order=created_at.desc&limit=200`
     );
 
     if (!rows.length) {
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('Cache-Control', 'public, s-maxage=3600');
       return res.status(404).send(`<!DOCTYPE html><html lang="en-ZA"><head><meta charset="utf-8">
-<title>No ${esc(raw)} parts | Spare Parts Finder</title><meta name="robots" content="noindex,follow">
-</head><body><h1>No ${esc(raw)} parts listed right now</h1>
+<title>No ${esc(param)} parts | Spare Parts Finder</title><meta name="robots" content="noindex,follow">
+</head><body><h1>No ${esc(param)} parts listed right now</h1>
 <p><a href="/">Browse the marketplace →</a></p></body></html>`);
     }
 
     const make = rows[0].make;
+    // Sibling brands give every brand page real outbound links, so crawlers can
+    // walk the catalogue instead of treating each page as an orphan.
+    const siblings = allMakes
+      .filter(m => slugify(m) !== slug)
+      .sort((a, b) => a.localeCompare(b))
+      .slice(0, 60);
     const models = [...new Set(rows.map(r => String(r.model || '').trim()).filter(m => m && m !== 'Various'))].slice(0, 24);
     const cats = [...new Set(rows.map(r => String(r.category || '').trim()).filter(Boolean))];
 
@@ -27,7 +63,7 @@ export default async function handler(req, res) {
     const desc = `New, used and salvage ${make} parts from verified South African sellers. ` +
       `${rows.length} ${make} listings${models.length ? ' covering ' + models.slice(0, 6).join(', ') : ''}. ` +
       `Delivered nationwide or collect.`;
-    const canonical = `${SITE}/brand/${encodeURIComponent(String(make).toLowerCase())}`;
+    const canonical = `${SITE}/brand/${slug}`;
 
     const ld = {
       '@context': 'https://schema.org',
@@ -82,6 +118,10 @@ h1{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:900;text
 .card .p{color:var(--blue);font-weight:700;font-size:14px;margin-top:6px}
 footer{border-top:1px solid var(--border);margin-top:2.5rem;padding:1.2rem;text-align:center;font-size:12px;color:var(--text3)}
 footer a{color:var(--blue)}
+.brands{margin-top:2rem;border-top:1px solid var(--border);padding-top:1.1rem}
+.brands h2{font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin:0 0 .7rem}
+.brands a{display:inline-block;margin:0 6px 6px 0;padding:4px 11px;border:1px solid var(--border);border-radius:20px;font-size:12.5px;color:var(--text2);text-decoration:none}
+.brands a:hover{border-color:var(--blue);color:var(--blue)}
 </style>
 </head>
 <body>
@@ -102,6 +142,9 @@ ${rows.slice(0, 120).map(p => {
 }).join('')}
 </div>
 ${cats.length ? `<p class="lede" style="margin-top:1.6rem">Categories in stock: ${esc(cats.join(', '))}.</p>` : ''}
+${siblings.length ? `<nav class="brands"><h2>Other makes on the marketplace</h2>
+${siblings.map(m => `<a href="/brand/${esc(slugify(m))}">${esc(m)}</a>`).join('')}
+</nav>` : ''}
 </main>
 <footer>© ${new Date().getFullYear()} Spare Parts Finder — Marketplace · <a href="/">Browse all parts</a></footer>
 </body>
