@@ -1606,23 +1606,36 @@ function showGridLoading(on) {
 // ══════════════════════════════════════════════════════════════
 //  ENQUIRIES
 // ══════════════════════════════════════════════════════════════
+// Buyers can INSERT into enquiries but cannot SELECT them back (RLS restricts
+// reads to the owning seller). So the reference is generated here and passed as
+// the id — never use .select() on these inserts or the whole row is rejected.
+function newEnquiryRef() {
+  return 'REF-' + Math.random().toString(36).substring(2,8).toUpperCase();
+}
+
 async function submitInlineEnquiry() {
   const name = document.getElementById('ef-name').value.trim();
   const phone= document.getElementById('ef-phone').value.trim();
   if (!name || !phone) { showToast('Please enter your name and phone number.'); return; }
   setBtnLoad('enq-submit-btn', true, 'Sending…');
+  const ref = newEnquiryRef();
   const enquiryData = {
+    id: ref,
     listing_id: currentProduct.id, seller_id: currentProduct.seller_id,
     buyer_name: name, buyer_phone: phone,
-    buyer_email: document.getElementById('ef-email').value,
+    buyer_email: document.getElementById('ef-email').value || null,
     message: document.getElementById('ef-msg').value || `Hi, I'm interested in the ${currentProduct.name}. Is it still available?`,
     listing_name: currentProduct.name,
     seller_email: currentProduct.sellers?.email || '',
     status: 'new',
   };
-  const { data, error } = await sb.from('enquiries').insert(enquiryData).select().single();
+  const { error } = await sb.from('enquiries').insert(enquiryData);
   setBtnLoad('enq-submit-btn', false, 'Send →');
-  const ref = data?.id || 'REF-' + Math.random().toString(36).substring(2,8).toUpperCase();
+  if (error) {
+    console.error('Enquiry insert failed:', error);
+    showToast('Could not send your enquiry — please WhatsApp the seller instead.');
+    return;
+  }
   document.getElementById('enq-ref').textContent = ref;
   document.getElementById('enq-success').style.display = 'block';
   // Notify seller via Edge Function
@@ -1630,30 +1643,39 @@ async function submitInlineEnquiry() {
     await fetch('https://ycoclceordqbeumeujzf.supabase.co/functions/v1/notify-seller', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON },
-      body: JSON.stringify({ record: { ...enquiryData, id: ref } })
+      body: JSON.stringify({ record: enquiryData })
     });
   } catch(e) { console.log('Email notification failed:', e); }
 }
 
 async function submitEnquiry() {
-  const name = document.getElementById('enq-name').value.trim();
-  if (!name) { showToast('Please enter your name.'); return; }
+  const name  = document.getElementById('enq-name').value.trim();
+  const phone = document.getElementById('enq-phone').value.trim();
+  if (!name)  { showToast('Please enter your name.'); return; }
+  // buyer_phone is NOT NULL in the database — without this the insert is rejected.
+  if (!phone) { showToast('Please enter your phone number.'); return; }
+  const ref = newEnquiryRef();
   const contactData = {
-    buyer_name: name, buyer_phone: document.getElementById('enq-phone').value,
-    buyer_email: document.getElementById('enq-email').value,
+    id: ref,
+    buyer_name: name, buyer_phone: phone,
+    buyer_email: document.getElementById('enq-email').value || null,
     message: document.querySelector('#view-contact textarea')?.value || '',
     seller_email: 'info@sparepartsfinder.co.za',
     listing_name: 'Part Request',
     status: 'new',
   };
-  const { data } = await sb.from('enquiries').insert(contactData).select().single();
-  const ref = data?.id || 'REF-' + Math.random().toString(36).substring(2,8).toUpperCase();
+  const { error } = await sb.from('enquiries').insert(contactData);
+  if (error) {
+    console.error('Part request insert failed:', error);
+    showToast('Could not send your request — please WhatsApp us instead.');
+    return;
+  }
   // Notify admin of new part request
   try {
     await fetch('https://ycoclceordqbeumeujzf.supabase.co/functions/v1/notify-seller', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON },
-      body: JSON.stringify({ record: { ...contactData, id: ref } })
+      body: JSON.stringify({ record: contactData })
     });
   } catch(e) { console.log('Email notification failed:', e); }
   showSuccess('✅', 'Request Sent!', `Your part request has been submitted — Reference: ${ref}. Matching sellers will contact you within 2–4 hours via phone or WhatsApp.`);
@@ -2355,8 +2377,15 @@ async function placeOrder() {
   if(!name||!phone){showToast('Please enter your name and phone number.');return;}
   const sub=cart.reduce((a,i)=>a+i.product.price*i.quantity,0);
   const del=document.getElementById('co-delivery').value==='courier'?150:0;
-  const {data,error} = await sb.from('orders').insert({ buyer_name:name, buyer_phone:phone, buyer_email:document.getElementById('co-email').value||'', delivery_address:document.getElementById('co-addr')?.value||'', is_collection:document.getElementById('co-delivery').value!=='courier', total:sub+del, status:'pending', items:cart.map(i=>({listing_id:i.product.id,name:i.product.name,price:i.product.price,qty:i.quantity})), listing_ids:cart.map(i=>i.product.id) }).select().single();
-  const ordId = data?.id||'ORD-'+Math.random().toString(36).substring(2,8).toUpperCase();
+  // Same rule as enquiries: buyers may INSERT but not SELECT back, so the order
+  // number is generated here and no .select() is chained onto the insert.
+  const ordId = 'ORD-'+Math.random().toString(36).substring(2,8).toUpperCase();
+  const {error} = await sb.from('orders').insert({ id:ordId, buyer_name:name, buyer_phone:phone, buyer_email:document.getElementById('co-email').value||null, delivery_address:document.getElementById('co-addr')?.value||'', is_collection:document.getElementById('co-delivery').value!=='courier', total:sub+del, status:'pending', items:cart.map(i=>({listing_id:i.product.id,name:i.product.name,price:i.product.price,qty:i.quantity})), listing_ids:cart.map(i=>i.product.id) });
+  if (error) {
+    console.error('Order insert failed:', error);
+    showToast('Could not place your order — please WhatsApp us to complete it.');
+    return;
+  }
   cart=[]; document.getElementById('cart-badge').textContent=0;
   showSuccess('🎉','Order Placed!',`Order ${ordId} confirmed! The seller will contact you within 2–4 hours via phone or WhatsApp to arrange payment and delivery.`);
   gotoView('browse',document.querySelectorAll('.nav-tab')[0]);
