@@ -520,6 +520,12 @@ footer{background:var(--blue3);padding:2rem 1.5rem 1.25rem;margin-top:3rem}
 @media(max-width:768px){.topbar{display:none}.nav-tabs{display:none}.nav-right{display:none}.hamburger{display:flex}.logo-line2{display:none}}
 @media(max-width:500px){.logo-line2{display:none}}
 </style>
+<script>
+/* First-touch sign-up attribution: ?src=fb&c=pinned -> localStorage (never blocks the page) */
+(function(){try{var q=new URLSearchParams(location.search),s=q.get('src'),c=q.get('c');
+if(s&&!localStorage.getItem('spf_src')){localStorage.setItem('spf_src',s.slice(0,40));if(c)localStorage.setItem('spf_camp',c.slice(0,60));}}catch(e){}})();
+function spfSrc(){try{return{signup_source:localStorage.getItem('spf_src')||null,signup_campaign:localStorage.getItem('spf_camp')||null};}catch(e){return{signup_source:null,signup_campaign:null};}}
+</script>
 </head>
 <body>
 
@@ -1400,7 +1406,7 @@ async function doRegister() {
     const sellerType = document.getElementById('reg-seller-type')?.value || 'business';
     const bizName = biz || (sellerType==='private' ? name : name + ' Spares');
     const slug = bizName.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'') + '-' + Math.random().toString(36).slice(2,6);
-    await sb.from('sellers').insert({ user_id: data.user.id, business_name: bizName, contact_person: name, email, phone: document.getElementById('reg-phone').value || '', status: 'pending', seller_type: sellerType, slug });
+    await sb.from('sellers').insert({ user_id: data.user.id, business_name: bizName, contact_person: name, email, phone: document.getElementById('reg-phone').value || '', status: 'pending', seller_type: sellerType, slug, ...spfSrc() });
   }
   document.getElementById('modal-auth').classList.remove('open');
   showSuccess('🎉', 'Welcome to SPF Marketplace!', role === 'seller' ? 'Account created! Check your email to verify, then sign in to access your seller dashboard.' : 'Account created! You can now browse and enquire on parts across South Africa.');
@@ -1473,7 +1479,7 @@ async function ensureSellerRow(supaUser){
     await sb.from('sellers').insert({
       user_id: supaUser.id, business_name: biz, contact_person: name,
       email: supaUser.email, phone: meta.phone || '', status: 'pending',
-      seller_type: type, slug
+      seller_type: type, slug, ...spfSrc()
     });
   }catch(e){ console.warn('ensureSellerRow:', e.message); }
 }
