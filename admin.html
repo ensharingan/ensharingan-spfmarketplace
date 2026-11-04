@@ -196,6 +196,12 @@ textarea{resize:vertical;min-height:80px}
       <div class="nav-item" onclick="showPage('enquiries',this)"><span class="nav-icon">🔔</span>Enquiries</div>
       <div class="nav-item" onclick="showPage('subscriptions',this)"><span class="nav-icon">💳</span>Subscriptions</div>
 
+      <div class="nav-section">Marketing</div>
+      <div class="nav-item" onclick="showPage('mk-prospects',this);mkLoad()"><span class="nav-icon">🎯</span>Prospects</div>
+      <div class="nav-item" onclick="showPage('mk-outreach',this);mkLoad()"><span class="nav-icon">✉️</span>Outreach</div>
+      <div class="nav-item" onclick="showPage('mk-activation',this);mkLoad()"><span class="nav-icon">🚀</span>Activation</div>
+      <div class="nav-item" onclick="showPage('mk-sources',this);mkLoad()"><span class="nav-icon">📈</span>Sources</div>
+
       <div class="nav-section">Finance</div>
       <div class="nav-item" onclick="showPage('revenue',this)"><span class="nav-icon">💰</span>Revenue</div>
       <div class="nav-item" onclick="showPage('invoices',this)"><span class="nav-icon">🧾</span>Invoices</div>
@@ -463,6 +469,83 @@ textarea{resize:vertical;min-height:80px}
       </div>
     </div>
 
+
+    <!-- ── MARKETING: PROSPECTS ── -->
+    <div class="page" id="page-mk-prospects">
+      <div class="page-title">Prospects</div>
+      <div class="stat-row" id="mk-pstats"></div>
+      <div class="table-card">
+        <div class="table-hd">
+          <span class="table-title">Prospect list</span>
+          <div class="table-actions">
+            <label class="btn btn-primary" style="cursor:pointer">Import CSV<input type="file" accept=".csv" style="display:none" onchange="mkImport(this)"></label>
+            <input class="search-input" placeholder="Search…" oninput="mkSearch=this.value.toLowerCase();mkRenderProspects()">
+            <select class="filter-select" onchange="mkStatus=this.value;mkRenderProspects()">
+              <option value="">All status</option><option value="new">New</option><option value="contacted">Contacted</option>
+              <option value="replied">Replied</option><option value="listed">Listed</option><option value="do_not_contact">Do not contact</option>
+            </select>
+          </div>
+        </div>
+        <p style="padding:0 1.1rem .8rem;font-size:12px;color:var(--text3)">CSV columns: business_name, type, city, province, website, email, phone. Only add businesses whose contact details are published by the business itself. Rows without an email are kept for manual WhatsApp or phone follow-up.</p>
+        <table><thead><tr><th>Business</th><th>Type</th><th>Location</th><th>Email</th><th>Phone</th><th>Status</th><th>Step</th></tr></thead>
+        <tbody id="mk-ptbody"><tr><td colspan="7" style="text-align:center;padding:1.5rem;color:var(--text3)">Loading…</td></tr></tbody></table>
+      </div>
+    </div>
+
+    <!-- ── MARKETING: OUTREACH ── -->
+    <div class="page" id="page-mk-outreach">
+      <div class="page-title">Outreach</div>
+      <div class="stat-row" id="mk-ostats"></div>
+      <div class="table-card" style="margin-bottom:1rem">
+        <div class="table-hd"><span class="table-title">Send today's batch</span></div>
+        <div style="padding:0 1.1rem 1.1rem;font-size:13px;color:var(--text2);line-height:1.6">
+          One email per business, personalised, with an opt-out link and your address. A second email goes out once, after the follow-up delay, to people who haven't opted out. Always preview first.
+          <div style="margin-top:.8rem;display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-primary" id="mk-prev-btn" onclick="mkRun(true)">Preview batch (no emails sent)</button>
+            <button class="btn btn-red" id="mk-send-btn" onclick="mkRun(false)">Send batch now</button>
+          </div>
+          <div id="mk-run-out" style="margin-top:.8rem;font-size:12px"></div>
+        </div>
+      </div>
+      <div class="table-card">
+        <div class="table-hd"><span class="table-title">Settings and templates</span></div>
+        <div style="padding:0 1.1rem 1.1rem;display:grid;gap:10px;max-width:760px;font-size:13px">
+          <label><input type="checkbox" id="mk-enabled"> Sending enabled (leave off until Resend is verified and a preview looks right)</label>
+          <label>Daily cap <input class="search-input" id="mk-cap" type="number" min="1" max="100" style="width:90px"></label>
+          <label>Follow-up after (days) <input class="search-input" id="mk-days" type="number" min="1" max="30" style="width:90px"></label>
+          <label>From <input class="search-input" id="mk-from" style="width:100%"></label>
+          <label>Reply-to <input class="search-input" id="mk-reply" style="width:100%"></label>
+          <label>Email 1 subject <input class="search-input" id="mk-s0" style="width:100%"></label>
+          <label>Email 1 body <textarea class="search-input" id="mk-b0" rows="8" style="width:100%"></textarea></label>
+          <label>Email 2 subject <input class="search-input" id="mk-s1" style="width:100%"></label>
+          <label>Email 2 body <textarea class="search-input" id="mk-b1" rows="6" style="width:100%"></textarea></label>
+          <div style="font-size:11px;color:var(--text3)">Placeholders: {{name}} {{type}} {{city}}</div>
+          <div><button class="btn btn-primary" onclick="mkSaveSettings()">Save settings</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── MARKETING: ACTIVATION ── -->
+    <div class="page" id="page-mk-activation">
+      <div class="page-title">Activation</div>
+      <div class="table-card">
+        <div class="table-hd"><span class="table-title">Approved sellers with no active listings</span></div>
+        <p style="padding:0 1.1rem .8rem;font-size:12px;color:var(--text3)">These sellers joined but never listed. Message them one at a time and offer to upload their first listings for them.</p>
+        <table><thead><tr><th>Business</th><th>Contact</th><th>Joined</th><th>Source</th><th>Reach out</th></tr></thead>
+        <tbody id="mk-atbody"></tbody></table>
+      </div>
+    </div>
+
+    <!-- ── MARKETING: SOURCES ── -->
+    <div class="page" id="page-mk-sources">
+      <div class="page-title">Sign-up sources</div>
+      <div class="table-card">
+        <div class="table-hd"><span class="table-title">Seller sign-ups by source</span></div>
+        <p style="padding:0 1.1rem .8rem;font-size:12px;color:var(--text3)">Counts sellers by the ?src= and ?c= tag on the link they first arrived through. Sign-ups before tracking went live show as untagged.</p>
+        <table><thead><tr><th>Source</th><th>Campaign</th><th>Sign-ups</th><th>With a listing</th></tr></thead>
+        <tbody id="mk-sotbody"></tbody></table>
+      </div>
+    </div>
 
     <!-- ── BULK UPLOAD ── -->
     <div class="page" id="page-bulkupload">
@@ -766,6 +849,7 @@ async function loadAllData() {
   // Load listings
   const { data: listings } = await sb.from('listings').select('*, sellers(business_name)').order('created_at', { ascending: false });
   allListings = listings || [];
+  await loadSellerListingCounts();
 
   // Load enquiries
   const { data: enquiries } = await sb.from('enquiries').select('*, listings(name)').order('created_at', { ascending: false });
@@ -1892,6 +1976,200 @@ function downloadWooTemplate() {
 //  INIT
 // ══════════════════════════════════════════════════════════════
 checkAdminSession();
+
+// ══════════════════════════════════════════════════════════════
+//  MARKETING
+// ══════════════════════════════════════════════════════════════
+let mkProspects = [], mkSettings = null, mkSearch = '', mkStatus = '', mkLoaded = false, mkCounts = {}, mkSuppressed = 0, mkSent24 = 0;
+
+// sellers.listing_count is not a real column, so the Listings column always showed 0.
+async function loadSellerListingCounts() {
+  const counts = {};
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await sb.from('listings').select('seller_id').eq('status', 'active').order('id').range(from, from + 999);
+    if (error || !data) break;
+    data.forEach(r => { counts[r.seller_id] = (counts[r.seller_id] || 0) + 1; });
+    if (data.length < 1000) break;
+  }
+  mkCounts = counts;
+  allSellers.forEach(x => { x.listing_count = counts[x.id] || 0; });
+}
+
+async function mkLoad() {
+  try {
+    const all = [];
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await sb.from('marketing_prospects').select('*').order('created_at', { ascending: false }).range(from, from + 999);
+      if (error) throw error;
+      all.push(...(data || []));
+      if (!data || data.length < 1000) break;
+    }
+    mkProspects = all;
+    const { data: st } = await sb.from('marketing_settings').select('*').eq('id', 1).maybeSingle();
+    mkSettings = st;
+    const { count: sc } = await sb.from('marketing_suppression').select('email', { count: 'exact', head: true });
+    mkSuppressed = sc || 0;
+    const since = new Date(Date.now() - 864e5).toISOString();
+    const { count: s24 } = await sb.from('marketing_sends').select('id', { count: 'exact', head: true }).eq('status', 'sent').gte('sent_at', since);
+    mkSent24 = s24 || 0;
+    mkLoaded = true;
+  } catch (e) { showToast('Marketing load failed: ' + (e.message || e)); }
+  mkRenderProspects(); mkRenderOutreach(); mkRenderActivation(); mkRenderSources();
+}
+
+function mkStat(n, l, c) { return `<div class="stat-card ${c || ''}"><div class="stat-num">${n}</div><div class="stat-lbl">${l}</div></div>`; }
+
+function mkRenderProspects() {
+  const by = k => mkProspects.filter(p => p.status === k).length;
+  document.getElementById('mk-pstats').innerHTML =
+    mkStat(mkProspects.length, 'Prospects') + mkStat(mkProspects.filter(p => p.email).length, 'With email', 'green') +
+    mkStat(by('new'), 'New') + mkStat(by('contacted'), 'Contacted', 'warn') + mkStat(by('listed'), 'Listed', 'green');
+  const rows = mkProspects.filter(p =>
+    (!mkStatus || p.status === mkStatus) &&
+    (!mkSearch || [p.business_name, p.city, p.province, p.email, p.type].join(' ').toLowerCase().includes(mkSearch))).slice(0, 300);
+  document.getElementById('mk-ptbody').innerHTML = rows.length ? rows.map(p => `<tr>
+    <td><strong>${esc(p.business_name)}</strong><br><span style="font-size:11px;color:var(--text3)">${esc(p.website || '')}</span></td>
+    <td>${esc(p.type || '')}</td><td>${esc([p.city, p.province].filter(Boolean).join(', '))}</td>
+    <td style="font-size:12px">${esc(p.email || '')}</td><td style="font-size:12px">${esc(p.phone || '')}</td>
+    <td><select class="filter-select" onchange="mkSetStatus('${p.id}',this.value)">${['new','contacted','replied','listed','do_not_contact'].map(v => `<option value="${v}"${p.status === v ? ' selected' : ''}>${v.replace(/_/g,' ')}</option>`).join('')}</select></td>
+    <td style="text-align:center">${p.step}</td></tr>`).join('')
+    : '<tr><td colspan="7" style="text-align:center;padding:1.5rem;color:var(--text3)">No prospects yet. Import a CSV.</td></tr>';
+}
+
+async function mkSetStatus(id, status) {
+  const upd = { status }; if (status === 'do_not_contact') upd.next_send_at = null;
+  const { error } = await sb.from('marketing_prospects').update(upd).eq('id', id);
+  if (error) { showToast('Update failed: ' + error.message); return; }
+  const p = mkProspects.find(x => x.id === id);
+  if (p) { Object.assign(p, upd);
+    if (status === 'do_not_contact' && p.email) await sb.from('marketing_suppression').upsert({ email: p.email.toLowerCase(), reason: 'manual' }); }
+  mkRenderProspects();
+}
+
+function mkParseCsv(text) {
+  const rows = []; let row = [], cur = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += c; }
+    else if (c === '"') q = true;
+    else if (c === ',') { row.push(cur); cur = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(cur); cur = ''; if (row.some(x => x.trim())) rows.push(row); row = []; }
+    else cur += c;
+  }
+  if (cur || row.length) { row.push(cur); if (row.some(x => x.trim())) rows.push(row); }
+  return rows;
+}
+
+async function mkImport(input) {
+  const f = input.files[0]; input.value = '';
+  if (!f) return;
+  const rows = mkParseCsv(await f.text());
+  if (rows.length < 2) { showToast('CSV is empty.'); return; }
+  const head = rows[0].map(h => h.trim().toLowerCase());
+  const col = n => head.indexOf(n);
+  if (col('business_name') < 0) { showToast('CSV needs a business_name column.'); return; }
+  const { data: sup } = await sb.from('marketing_suppression').select('email');
+  const blocked = new Set((sup || []).map(r => r.email.toLowerCase()));
+  const have = new Set(mkProspects.map(p => (p.email || '').toLowerCase()).filter(Boolean));
+  const seen = new Set(), out = []; let skipped = 0;
+  const rx = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+  for (const r of rows.slice(1)) {
+    const g = n => (col(n) >= 0 ? (r[col(n)] || '').trim() : '');
+    const name = g('business_name'); if (!name) continue;
+    let email = g('email').toLowerCase(); if (email && !rx.test(email)) email = '';
+    if (email && (blocked.has(email) || have.has(email) || seen.has(email))) { skipped++; continue; }
+    if (email) seen.add(email);
+    out.push({ business_name: name, type: g('type') || null, city: g('city') || null, province: g('province') || null,
+      website: g('website') || null, email: email || null, phone: g('phone') || null, source: 'import:' + f.name });
+  }
+  let added = 0;
+  for (let i = 0; i < out.length; i += 200) {
+    const { error } = await sb.from('marketing_prospects').insert(out.slice(i, i + 200));
+    if (error) { showToast('Import stopped: ' + error.message); break; }
+    added += Math.min(200, out.length - i);
+  }
+  logAudit('Prospects imported', added + ' from ' + f.name);
+  showToast(`Imported ${added}, skipped ${skipped} duplicates or opted-out.`, 'success');
+  mkLoad();
+}
+
+function mkRenderOutreach() {
+  const due = mkProspects.filter(p => p.status === 'contacted' && p.step === 1 && p.next_send_at && new Date(p.next_send_at) <= new Date()).length;
+  const ready = mkProspects.filter(p => p.status === 'new' && p.email).length;
+  document.getElementById('mk-ostats').innerHTML =
+    mkStat(ready, 'Ready for email 1') + mkStat(due, 'Follow-ups due', 'warn') +
+    mkStat(mkSent24, 'Sent in last 24h', 'green') + mkStat(mkSuppressed, 'Opted out', 'red');
+  const s = mkSettings; if (!s) return;
+  document.getElementById('mk-enabled').checked = !!s.sending_enabled;
+  document.getElementById('mk-cap').value = s.daily_cap;
+  document.getElementById('mk-days').value = s.followup_days;
+  document.getElementById('mk-from').value = s.from_email;
+  document.getElementById('mk-reply').value = s.reply_to;
+  document.getElementById('mk-s0').value = s.subject_0; document.getElementById('mk-b0').value = s.body_0;
+  document.getElementById('mk-s1').value = s.subject_1; document.getElementById('mk-b1').value = s.body_1;
+}
+
+async function mkSaveSettings() {
+  const v = id => document.getElementById(id).value;
+  const upd = { sending_enabled: document.getElementById('mk-enabled').checked,
+    daily_cap: Math.max(1, Math.min(100, parseInt(v('mk-cap'), 10) || 20)),
+    followup_days: Math.max(1, parseInt(v('mk-days'), 10) || 4),
+    from_email: v('mk-from').trim(), reply_to: v('mk-reply').trim(),
+    subject_0: v('mk-s0'), body_0: v('mk-b0'), subject_1: v('mk-s1'), body_1: v('mk-b1') };
+  const { error } = await sb.from('marketing_settings').update(upd).eq('id', 1);
+  if (error) { showToast('Save failed: ' + error.message); return; }
+  mkSettings = { ...mkSettings, ...upd };
+  logAudit('Marketing settings saved', upd.sending_enabled ? 'sending ON' : 'sending OFF');
+  showToast('Saved ✓', 'success');
+}
+
+async function mkRun(dry) {
+  const out = document.getElementById('mk-run-out');
+  const go = async () => {
+    out.textContent = dry ? 'Building preview…' : 'Sending… this takes about 2 seconds per email.';
+    const { data, error } = await sb.functions.invoke('marketing-send', { body: { dry_run: dry } });
+    if (error || data?.error) { out.innerHTML = '<span style="color:var(--red)">' + esc(data?.error || error.message) + '</span>'; return; }
+    const list = (data.results || []).map(r => r.stopped ? `<li><strong>${esc(r.stopped)}</strong></li>` :
+      `<li>${esc(r.to)} · email ${r.step + 1}${dry ? ' · ' + esc(r.subject) : r.ok ? ' · sent' : ' · FAILED ' + esc(r.error || '')}</li>`).join('');
+    out.innerHTML = `<strong>${dry ? 'Preview' : 'Done'}:</strong> ${data.queued} in this batch (cap ${data.cap}, ${data.sent_last_24h} already sent in 24h)<ul style="margin:6px 0 0 18px">${list}</ul>`;
+    if (!dry) { logAudit('Outreach batch sent', data.queued + ' emails'); mkLoad(); }
+  };
+  if (dry) return go();
+  openConfirmModal('Send outreach batch', 'This sends real emails to businesses on your prospect list, up to your daily cap. Run a preview first if you have not.', 'btn-red', go);
+}
+
+function mkWaLink(phone, msg) {
+  let d = String(phone || '').replace(/[^\d]/g, ''); if (!d) return '';
+  if (d.startsWith('0')) d = '27' + d.slice(1);
+  return 'https://wa.me/' + d + '?text=' + encodeURIComponent(msg);
+}
+
+function mkRenderActivation() {
+  const rows = allSellers.filter(x => x.status === 'approved' && !x.listing_count);
+  document.getElementById('mk-atbody').innerHTML = rows.length ? rows.map(x => {
+    const msg = `Hi ${x.contact_person || x.business_name}, it's Chevan from Spare Parts Finder. You joined the marketplace but have no parts listed yet. Send me photos and prices for your first 10 parts and I'll upload them for you for free.`;
+    const wa = mkWaLink(x.phone, msg);
+    const mail = x.email ? 'mailto:' + encodeURIComponent(x.email).replace('%40', '@') + '?subject=' + encodeURIComponent('Your Spare Parts Finder listings') + '&body=' + encodeURIComponent(msg) : '';
+    return `<tr><td><strong>${esc(x.business_name)}</strong><br><span style="font-size:11px;color:var(--text3)">${esc(x.contact_person || '')}</span></td>
+      <td style="font-size:12px">${esc(x.email || '')}<br>${esc(x.phone || '')}</td>
+      <td style="font-size:12px">${esc((x.created_at || '').slice(0, 10))}</td>
+      <td style="font-size:12px">${esc([x.signup_source, x.signup_campaign].filter(Boolean).join(' / ') || '-')}</td>
+      <td>${wa ? `<a class="btn btn-primary" style="text-decoration:none" target="_blank" rel="noopener" href="${esc(wa)}">WhatsApp</a> ` : ''}${mail ? `<a class="btn btn-primary" style="text-decoration:none" href="${esc(mail)}">Email</a>` : ''}</td></tr>`;
+  }).join('') : '<tr><td colspan="5" style="text-align:center;padding:1.5rem;color:var(--text3)">Every approved seller has listings.</td></tr>';
+}
+
+function mkRenderSources() {
+  const g = {};
+  allSellers.forEach(x => {
+    const k = (x.signup_source || '(untagged)') + '|' + (x.signup_campaign || '');
+    g[k] = g[k] || { n: 0, l: 0 }; g[k].n++; if (x.listing_count) g[k].l++;
+  });
+  const rows = Object.entries(g).sort((a, b) => b[1].n - a[1].n);
+  document.getElementById('mk-sotbody').innerHTML = rows.map(([k, v]) => {
+    const [src, camp] = k.split('|');
+    return `<tr><td>${esc(src)}</td><td>${esc(camp || '-')}</td><td>${v.n}</td><td>${v.l}</td></tr>`;
+  }).join('');
+}
 </script>
 </body>
 </html>
