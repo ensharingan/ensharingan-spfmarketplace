@@ -1,4 +1,7 @@
-import { sbSelect, esc, partUrl, idFromSlug, hasPrice, money, gCondition, sanitizeHtml, plainText, SITE } from './_lib.js';
+import {
+  sbSelect, esc, partUrl, idFromSlug, hasPrice, hasImages, money, gCondition, sanitizeHtml, plainText,
+  canonMake, slugify, getMakeIndex, makeInList, partCard, clip, jsonLd, notFound, CARD_CSS, SITE
+} from './_lib.js';
 
 const SELECT =
   'id,name,description,make,model,category,condition,price,sku,images,' +
@@ -20,11 +23,7 @@ export default async function handler(req, res) {
     );
     const p = rows && rows[0];
 
-    if (!p) {
-      res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      res.setHeader('Cache-Control', 'public, max-age=60');
-      return res.status(404).send(notFoundPage());
-    }
+    if (!p) return notFound(res, 'This part is no longer listed', 'It may have sold, or the link may be out of date.');
 
     // Keep one canonical URL per part: redirect if the slug has drifted.
     const canonical = partUrl(p);
@@ -34,32 +33,68 @@ export default async function handler(req, res) {
       return res.status(301).end();
     }
 
+    // More from the same brand: gives every part page real outbound links and
+    // lets crawlers move sideways through the catalogue. Never blocks the page.
+    let related = [];
+    let brandSlug = null;
+    const makeName = canonMake(p.make);
+    if (makeName) {
+      brandSlug = slugify(makeName);
+      try {
+        const entry = (await getMakeIndex()).get(brandSlug);
+        if (entry) {
+          related = await sbSelect(
+            `listings?status=eq.active&id=neq.${encodeURIComponent(p.id)}` +
+            `&make=in.${encodeURIComponent(makeInList(entry.variants))}` +
+            `&images=not.is.null&images=neq.${encodeURIComponent('{}')}` +
+            `&select=id,name,make,model,condition,price,images,year_start,year_end` +
+            `&order=created_at.desc,id.asc&limit=8`
+          );
+        }
+      } catch (e) { related = []; }
+    }
+
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=3600');
-    return res.status(200).send(renderPart(p, canonical));
+    return res.status(200).send(renderPart(p, canonical, makeName, brandSlug, related));
   } catch (err) {
+    // 503, not a 200/404 page: a transient DB error must not de-index a good part.
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    return res.status(500).send(notFoundPage('Something went wrong loading this part.'));
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Retry-After', '120');
+    return res.status(503).send('<!DOCTYPE html><meta charset="utf-8"><meta name="robots" content="noindex"><title>Temporarily unavailable</title><p>Please try again shortly.</p>');
   }
 }
 
-function renderPart(p, canonical) {
+function renderPart(p, canonical, makeName, brandSlug, related) {
   const imgs = Array.isArray(p.images) ? p.images.filter(Boolean) : [];
   const img = imgs[0] || `${SITE}/assets/spf-logo.png`;
   const seller = p.sellers || {};
   const years = p.year_start ? `${p.year_start}–${p.year_end || 'on'}` : '';
-  const fitment = [p.make, p.model, years].filter(Boolean).join(' ');
+  const fitment = [makeName, p.model, years].filter(Boolean).join(' ');
 
-  const title = `${p.name}${fitment ? ' — ' + fitment : ''} | Spare Parts Finder`;
+  const shortName = clip(p.name, 70);
+  const title = `${shortName}${fitment ? ' — ' + fitment : ''} | Spare Parts Finder`;
   const bodyHtml = sanitizeHtml(p.description);
-  const metaDesc = (
-    plainText(p.description) ||
-    `${p.condition || 'Used'} ${p.name} for ${fitment || 'your vehicle'}. ` +
-    `${hasPrice(p) ? money(p) : 'Enquire for price'} from ${seller.business_name || 'a verified seller'}` +
-    `${p.location ? ' in ' + p.location : ''}. Delivered nationwide or collect.`
-  ).replace(/\s+/g, ' ').trim().slice(0, 300);
+  const descText = plainText(p.description);
+  const metaDesc = clip(
+    descText.length >= 60
+      ? descText
+      : `${p.condition || 'Used'} ${p.name} for ${fitment || 'your vehicle'}. ` +
+        `${hasPrice(p) ? money(p) : 'Enquire for price'} from ${seller.business_name || 'a verified seller'}` +
+        `${p.location ? ' in ' + p.location : ''}. Delivered nationwide or collect.`,
+    155);
 
-  // Google Shopping / rich results need an offer with a real price.
+  // Photo-less listings are thin: keep them out of the index (they're also left
+  // out of the sitemap). They become indexable the moment a photo is added.
+  const robots = hasImages(p) ? 'index,follow,max-image-preview:large' : 'noindex,follow';
+
+  const cond = gCondition(p.condition) === 'new'
+    ? 'https://schema.org/NewCondition'
+    : 'https://schema.org/UsedCondition';
+
+  // Google requires a price on Offer. Listings without one ("Enquire for price")
+  // get no Offer at all rather than an invalid one.
   const ld = {
     '@context': 'https://schema.org',
     '@type': 'Product',
@@ -67,22 +102,21 @@ function renderPart(p, canonical) {
     description: metaDesc,
     image: imgs.length ? imgs : [img],
     sku: p.sku || p.id,
+    ...(p.sku ? { mpn: p.sku } : {}),
     category: p.category || undefined,
-    brand: p.make ? { '@type': 'Brand', name: p.make } : undefined,
-    itemCondition: gCondition(p.condition) === 'new'
-      ? 'https://schema.org/NewCondition'
-      : 'https://schema.org/UsedCondition',
-    offers: {
-      '@type': 'Offer',
-      url: canonical,
-      priceCurrency: 'ZAR',
-      availability: 'https://schema.org/InStock',
-      itemCondition: gCondition(p.condition) === 'new'
-        ? 'https://schema.org/NewCondition'
-        : 'https://schema.org/UsedCondition',
-      seller: { '@type': 'Organization', name: seller.business_name || 'Spare Parts Finder' },
-      ...(hasPrice(p) ? { price: Number(p.price).toFixed(2) } : {})
-    }
+    brand: makeName ? { '@type': 'Brand', name: makeName } : undefined,
+    itemCondition: cond,
+    ...(hasPrice(p) ? {
+      offers: {
+        '@type': 'Offer',
+        url: canonical,
+        priceCurrency: 'ZAR',
+        price: Number(p.price).toFixed(2),
+        availability: 'https://schema.org/InStock',
+        itemCondition: cond,
+        seller: { '@type': 'Organization', name: seller.business_name || 'Spare Parts Finder' }
+      }
+    } : {})
   };
 
   const crumbs = {
@@ -90,13 +124,13 @@ function renderPart(p, canonical) {
     '@type': 'BreadcrumbList',
     itemListElement: [
       { '@type': 'ListItem', position: 1, name: 'Parts', item: SITE },
-      p.make ? { '@type': 'ListItem', position: 2, name: p.make, item: `${SITE}/brand/${encodeURIComponent(String(p.make).toLowerCase())}` } : null,
-      { '@type': 'ListItem', position: 3, name: p.name, item: canonical }
+      brandSlug ? { '@type': 'ListItem', position: 2, name: makeName, item: `${SITE}/brand/${brandSlug}` } : null,
+      { '@type': 'ListItem', position: brandSlug ? 3 : 2, name: p.name, item: canonical }
     ].filter(Boolean)
   };
 
   const specs = [
-    ['Make', p.make], ['Model', p.model], ['Years', years],
+    ['Make', makeName], ['Model', p.model], ['Years', years],
     ['Condition', p.condition], ['Category', p.category],
     ['Body Code', p.body_code], ['Engine Code', p.engine_code],
     ['SKU', p.sku], ['Location', p.location],
@@ -111,10 +145,10 @@ function renderPart(p, canonical) {
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(metaDesc)}">
 <link rel="canonical" href="${esc(canonical)}">
-<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="robots" content="${robots}">
 <meta property="og:type" content="product">
 <meta property="og:site_name" content="Spare Parts Finder">
-<meta property="og:title" content="${esc(p.name)}">
+<meta property="og:title" content="${esc(shortName)}">
 <meta property="og:description" content="${esc(metaDesc)}">
 <meta property="og:image" content="${esc(img)}">
 <meta property="og:url" content="${esc(canonical)}">
@@ -122,9 +156,10 @@ function renderPart(p, canonical) {
 ${hasPrice(p) ? `<meta property="product:price:amount" content="${Number(p.price).toFixed(2)}">
 <meta property="product:price:currency" content="ZAR">` : ''}
 <meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/png" href="/icons/icon-192.png">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
-<script type="application/ld+json">${JSON.stringify(ld)}</script>
-<script type="application/ld+json">${JSON.stringify(crumbs)}</script>
+<script type="application/ld+json">${jsonLd(ld)}</script>
+<script type="application/ld+json">${jsonLd(crumbs)}</script>
 <style>
 :root{--blue:#1e5bb0;--red:#e31e24;--text:#0f1f38;--text2:#4a5b74;--text3:#8595ab;--border:#e3e8ef;--bg2:#f4f7fb}
 *{box-sizing:border-box}
@@ -152,6 +187,10 @@ th{width:38%;color:var(--text3);font-weight:600;font-size:12px;text-transform:up
 .desc h2,.desc h3,.desc h4{font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;color:var(--text);margin:1.1rem 0 .4rem;font-size:17px}
 .desc ul{padding-left:1.1rem}
 .desc li{margin:.2rem 0}
+.rel{margin-top:2.4rem;border-top:1px solid var(--border);padding-top:1.2rem}
+.rel h2{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:900;text-transform:uppercase;margin:0 0 .8rem}
+.rel .all{display:inline-block;margin-top:1rem;color:var(--blue);font-weight:600;text-decoration:none;font-size:14px}
+${CARD_CSS}
 footer{border-top:1px solid var(--border);margin-top:2.5rem;padding:1.2rem;text-align:center;font-size:12px;color:var(--text3)}
 footer a{color:var(--blue)}
 @media(max-width:760px){.wrap{grid-template-columns:1fr}h1{font-size:25px}}
@@ -160,10 +199,10 @@ footer a{color:var(--blue)}
 <body>
 <header><a href="/"><img src="/assets/spf-mark.png" alt="">Spare Parts Finder</a></header>
 <main>
-<nav class="bc"><a href="/">Parts</a>${p.make ? ` › <a href="/brand/${esc(String(p.make).toLowerCase())}">${esc(p.make)}</a>` : ''} › ${esc(p.name)}</nav>
+<nav class="bc" aria-label="Breadcrumb"><a href="/">Parts</a>${brandSlug ? ` › <a href="/brand/${esc(brandSlug)}">${esc(makeName)}</a>` : ''} › ${esc(p.name)}</nav>
 <div class="wrap">
   <div class="gal">
-    <img src="${esc(img)}" alt="${esc(p.name)}${fitment ? ' for ' + esc(fitment) : ''}" width="600" height="450">
+    <img src="${esc(img)}" alt="${esc(p.name)}${fitment ? ' for ' + esc(fitment) : ''}" width="600" height="450" fetchpriority="high">
     ${imgs.length > 1 ? `<div class="thumbs">${imgs.slice(1, 7).map(u => `<img src="${esc(u)}" alt="${esc(p.name)}" loading="lazy">`).join('')}</div>` : ''}
   </div>
   <div>
@@ -182,22 +221,16 @@ footer a{color:var(--blue)}
     ${bodyHtml ? `<div class="desc">${bodyHtml}</div>` : ''}
   </div>
 </div>
+${related.length ? `<section class="rel">
+<h2>More ${esc(makeName)} parts</h2>
+<div class="grid">
+${related.map(partCard).join('\n')}
+</div>
+<a class="all" href="/brand/${esc(brandSlug)}">Browse all ${esc(makeName)} parts →</a>
+</section>` : ''}
 </main>
 <footer>© ${new Date().getFullYear()} Spare Parts Finder — Marketplace ·
 <a href="/">Browse all parts</a> · <a href="mailto:info@sparepartsfinder.co.za">info@sparepartsfinder.co.za</a></footer>
 </body>
 </html>`;
-}
-
-function notFoundPage(msg) {
-  return `<!DOCTYPE html><html lang="en-ZA"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Part not found | Spare Parts Finder</title>
-<meta name="robots" content="noindex,follow">
-<style>body{font-family:system-ui,sans-serif;max-width:560px;margin:12vh auto;padding:1.5rem;color:#0f1f38;text-align:center}
-a{color:#1e5bb0}</style></head><body>
-<h1>This part is no longer listed</h1>
-<p>${esc(msg || 'It may have sold, or the link may be out of date.')}</p>
-<p><a href="/">Browse 4,000+ parts on the marketplace →</a></p>
-</body></html>`;
 }

@@ -1,4 +1,4 @@
-import { sbSelect, esc, partUrl, gCondition, plainText, SITE } from './_lib.js';
+import { sbSelectAll, esc, partUrl, gCondition, plainText, canonMake, SITE } from './_lib.js';
 
 // Google Shopping RSS 2.0 feed.
 // Only listings with a real price and an image are eligible — Merchant Center
@@ -8,11 +8,13 @@ export default async function handler(req, res) {
     res.setHeader('Content-Type', 'application/xml; charset=utf-8');
     res.setHeader('Cache-Control', 'public, s-maxage=10800, stale-while-revalidate=43200');
 
-    const rows = await sbSelect(
+    // Paged: a single request is capped at ~1000 rows, so limit=20000 silently
+    // returned only the first 1000 products to Merchant Center.
+    const rows = await sbSelectAll(
       'listings?status=eq.active&price=gt.0' +
       '&select=id,name,description,make,model,category,condition,price,sku,images,' +
       'year_start,year_end,body_code,engine_code,sellers(business_name)' +
-      '&order=created_at.desc&limit=20000'
+      '&order=created_at.desc,id.asc'
     );
 
     const items = rows.filter(p => Array.isArray(p.images) && p.images[0]).map(p => {
@@ -35,7 +37,7 @@ export default async function handler(req, res) {
 <g:availability>in_stock</g:availability>
 <g:price>${Number(p.price).toFixed(2)} ZAR</g:price>
 <g:condition>${gCondition(p.condition)}</g:condition>
-<g:brand>${esc(p.make && p.make !== 'Other' ? p.make : 'Spare Parts Finder')}</g:brand>
+<g:brand>${esc(canonMake(p.make) || 'Spare Parts Finder')}</g:brand>
 ${mpn ? `<g:mpn>${esc(mpn)}</g:mpn>` : ''}
 <g:identifier_exists>no</g:identifier_exists>
 <g:product_type>${esc(p.category || 'Vehicle Parts')}</g:product_type>

@@ -17,6 +17,10 @@
       "destination": "/api/brand?make=:make"
     },
     {
+      "source": "/shop/:slug",
+      "destination": "/api/shop?slug=:slug"
+    },
+    {
       "source": "/sitemap.xml",
       "destination": "/api/sitemap"
     },
