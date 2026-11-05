@@ -2130,7 +2130,12 @@ async function mkRun(dry) {
   const go = async () => {
     out.textContent = dry ? 'Building preview…' : 'Sending… this takes about 2 seconds per email.';
     const { data, error } = await sb.functions.invoke('marketing-send', { body: { dry_run: dry } });
-    if (error || data?.error) { out.innerHTML = '<span style="color:var(--red)">' + esc(data?.error || error.message) + '</span>'; return; }
+    if (error || data?.error) {
+      // supabase-js hides the function's own message behind "non-2xx"; read it from the response body.
+      let msg = data?.error || (error && error.message) || 'Request failed';
+      try { const body = await error.context.json(); if (body?.error) msg = body.error; } catch (e) {}
+      out.innerHTML = '<span style="color:var(--red)">' + esc(msg) + '</span>'; return;
+    }
     const list = (data.results || []).map(r => r.stopped ? `<li><strong>${esc(r.stopped)}</strong></li>` :
       `<li>${esc(r.to)} · email ${r.step + 1}${dry ? ' · ' + esc(r.subject) : r.ok ? ' · sent' : ' · FAILED ' + esc(r.error || '')}</li>`).join('');
     out.innerHTML = `<strong>${dry ? 'Preview' : 'Done'}:</strong> ${data.queued} in this batch (cap ${data.cap}, ${data.sent_last_24h} already sent in 24h)<ul style="margin:6px 0 0 18px">${list}</ul>`;
