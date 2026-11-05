@@ -124,6 +124,7 @@ tbody tr:hover td{background:var(--bg)}
 .modal-footer{padding:.85rem 1.25rem;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
 label{display:block;font-size:10px;font-family:var(--font-h);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:5px}
 input,select,textarea{width:100%;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--r);padding:8px 10px;font-family:var(--font-b);font-size:13px;color:var(--text);outline:none;transition:border-color .15s;appearance:none;margin-bottom:12px}
+input[type=checkbox],input[type=radio]{width:auto;appearance:auto;-webkit-appearance:auto;padding:0;margin:0 8px 0 0;accent-color:var(--blue);vertical-align:middle;cursor:pointer}
 input:focus,select:focus,textarea:focus{border-color:var(--blue);background:#fff}
 textarea{resize:vertical;min-height:80px}
 
@@ -510,7 +511,7 @@ textarea{resize:vertical;min-height:80px}
       <div class="table-card">
         <div class="table-hd"><span class="table-title">Settings and templates</span></div>
         <div style="padding:0 1.1rem 1.1rem;display:grid;gap:10px;max-width:760px;font-size:13px">
-          <label><input type="checkbox" id="mk-enabled"> Sending enabled (leave off until Resend is verified and a preview looks right)</label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px"><input type="checkbox" id="mk-enabled" style="width:18px;height:18px"> Sending enabled (leave off until Resend is verified and a preview looks right)</label>
           <label>Daily cap <input class="search-input" id="mk-cap" type="number" min="1" max="100" style="width:90px"></label>
           <label>Follow-up after (days) <input class="search-input" id="mk-days" type="number" min="1" max="30" style="width:90px"></label>
           <label>From <input class="search-input" id="mk-from" style="width:100%"></label>
