@@ -295,6 +295,7 @@ nav{background:var(--blue);padding:0 1.5rem;display:flex;align-items:center;gap:
 .vin-seg{font-family:ui-monospace,monospace;font-size:11.5px;padding:4px 8px;border-radius:4px;border:1px solid var(--border);background:#fff}
 .vin-seg b{display:block;font-family:var(--font-h);font-size:8.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--text3);font-weight:700}
 
+.gal-noimg{width:100%;aspect-ratio:4/3;border-radius:var(--rl);background:var(--bg2);border:1.5px dashed var(--border);flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--text3);font-weight:700;font-size:14px;text-align:center;padding:12px}
 .gal-main{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:var(--rl);background:var(--bg2);display:block;border:1.5px solid var(--border)}
 .gal-thumbs{display:flex;gap:6px;margin-top:7px}
 .gal-thumb{width:52px;height:40px;object-fit:cover;border-radius:var(--r);cursor:pointer;border:1.5px solid var(--border);transition:border-color .12s;opacity:.6}
@@ -1214,7 +1215,8 @@ function spfSrc(){try{return{signup_source:localStorage.getItem('spf_src')||null
     <div class="modal-body">
       <div class="modal-grid">
         <div>
-          <img class="gal-main" id="m-img" src="" alt="">
+          <img class="gal-main" id="m-img" src="" alt="" onerror="this.style.display='none';document.getElementById('m-noimg').style.display='flex'">
+          <div class="gal-noimg" id="m-noimg" style="display:none"><span style="font-size:42px">📷</span><span>No photo yet</span><span style="font-size:11px;font-weight:500">Tap WhatsApp Seller to request photos</span></div>
           <div class="gal-thumbs" id="m-thumbs"></div>
         </div>
         <div>
@@ -2425,7 +2427,9 @@ function openProduct(id) {
   currentProduct = p;
   const s = p.sellers||{business_name:'Verified Seller',operating_hours:'Mon-Fri 08:00–17:00',phone:'27615494504',whatsapp_enabled:true};
   const imgs = p.images||[];
-  document.getElementById('m-img').src = imgs[0]||'';
+  const mImg=document.getElementById('m-img'), mNo=document.getElementById('m-noimg');
+  if(imgs[0]){ mImg.style.display=''; mNo.style.display='none'; mImg.src=imgs[0]; }
+  else { mImg.removeAttribute('src'); mImg.style.display='none'; mNo.style.display='flex'; }
   document.getElementById('m-thumbs').innerHTML = imgs.map((img,i)=>`<img class="gal-thumb ${i===0?'active':''}" src="${img}" onclick="switchImg(this,'${img}')" alt="">`).join('');
   const condEl = document.getElementById('m-cond'); condEl.textContent=p.condition; condEl.className='m-cond-badge '+(p.condition==='New'?'cn':p.condition==='Damaged/Salvage'?'cs':'cu');
   document.getElementById('m-cat').textContent = p.category;
@@ -2467,7 +2471,7 @@ function openProduct(id) {
   document.getElementById('modal-product').classList.add('open');
 }
 
-function switchImg(el,src){document.getElementById('m-img').src=src;document.querySelectorAll('.gal-thumb').forEach(t=>t.classList.remove('active'));el.classList.add('active');}
+function switchImg(el,src){const mi=document.getElementById('m-img');document.getElementById('m-noimg').style.display='none';mi.style.display='';mi.src=src;document.querySelectorAll('.gal-thumb').forEach(t=>t.classList.remove('active'));el.classList.add('active');}
 function toggleEnqForm(){const f=document.getElementById('enq-form');f.style.display=f.style.display==='none'?'block':'none';}
 
 // ══════════════════════════════════════════════════════════════
