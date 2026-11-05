@@ -486,7 +486,7 @@ textarea{resize:vertical;min-height:80px}
             </select>
           </div>
         </div>
-        <p style="padding:0 1.1rem .8rem;font-size:12px;color:var(--text3)">CSV columns: business_name, type, city, province, website, email, phone. Only add businesses whose contact details are published by the business itself. Rows without an email are kept for manual WhatsApp or phone follow-up.</p>
+        <p style="padding:0 1.1rem .8rem;font-size:12px;color:var(--text3)">CSV columns: business_name, type, city, province, website, email, phone, and optionally status, step, notes (use status contacted or replied with step 2 for people you have already spoken to, so they are never auto-emailed). Only add businesses whose contact details are published by the business itself. Rows without an email are kept for manual WhatsApp or phone follow-up.</p>
         <table><thead><tr><th>Business</th><th>Type</th><th>Location</th><th>Email</th><th>Phone</th><th>Status</th><th>Step</th></tr></thead>
         <tbody id="mk-ptbody"><tr><td colspan="7" style="text-align:center;padding:1.5rem;color:var(--text3)">Loading…</td></tr></tbody></table>
       </div>
@@ -2080,7 +2080,9 @@ async function mkImport(input) {
     if (email && (blocked.has(email) || have.has(email) || seen.has(email))) { skipped++; continue; }
     if (email) seen.add(email);
     out.push({ business_name: name, type: g('type') || null, city: g('city') || null, province: g('province') || null,
-      website: g('website') || null, email: email || null, phone: g('phone') || null, source: 'import:' + f.name });
+      website: g('website') || null, email: email || null, phone: g('phone') || null, source: 'import:' + f.name,
+      status: ['new','contacted','replied','listed','do_not_contact'].includes(g('status')) ? g('status') : 'new',
+      step: Math.max(0, Math.min(2, parseInt(g('step'), 10) || 0)), notes: g('notes') || null });
   }
   let added = 0;
   for (let i = 0; i < out.length; i += 200) {
