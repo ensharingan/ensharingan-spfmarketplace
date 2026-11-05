@@ -519,6 +519,15 @@ footer{background:var(--blue3);padding:2rem 1.5rem 1.25rem;margin-top:3rem}
 @media(max-width:700px){.hero{padding:1rem 1rem 1.5rem}.hero-banner{margin-bottom:1rem}.main{padding:1rem}.search-row{grid-template-columns:1fr}.search-select{display:none}.modal-grid{grid-template-columns:1fr}.form-2{grid-template-columns:1fr}.add-grid{grid-template-columns:1fr}.prof-grid{grid-template-columns:1fr}.contact-layout{grid-template-columns:1fr}.footer-top{grid-template-columns:1fr}}
 @media(max-width:768px){.topbar{display:none}.nav-tabs{display:none}.nav-right{display:none}.hamburger{display:flex}.logo-line2{display:none}}
 @media(max-width:500px){.logo-line2{display:none}}
+/* Phones: two product cards per row, full-screen part popup, bigger tap targets */
+@media(max-width:700px){
+.parts-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:.6rem}
+.card-body{padding:8px 9px 10px}.card-name{font-size:13px}.card-meta{margin-bottom:6px}
+.card-price{font-size:16px}.card-loc{display:none}
+.overlay{padding:0}.modal{border-radius:0}.modal-body{padding:1rem}
+.m-name{font-size:19px}.m-price{font-size:26px}
+.btn-wa,.btn-enq,.btn-cart{min-height:48px}
+}
 </style>
 <script>
 /* First-touch sign-up attribution: ?src=fb&c=pinned -> localStorage (never blocks the page) */
