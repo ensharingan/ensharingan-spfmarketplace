@@ -519,9 +519,19 @@ textarea{resize:vertical;min-height:80px}
           <label>Email 1 body <textarea class="search-input" id="mk-b0" rows="8" style="width:100%"></textarea></label>
           <label>Email 2 subject <input class="search-input" id="mk-s1" style="width:100%"></label>
           <label>Email 2 body <textarea class="search-input" id="mk-b1" rows="6" style="width:100%"></textarea></label>
+          <label>WhatsApp message <textarea class="search-input" id="mk-wa" rows="5" style="width:100%"></textarea></label>
           <div style="font-size:11px;color:var(--text3)">Placeholders: {{name}} {{type}} {{city}}</div>
           <div><button class="btn btn-primary" onclick="mkSaveSettings()">Save settings</button></div>
         </div>
+      </div>
+
+      <div class="table-card" style="margin-top:1rem">
+        <div class="table-hd"><span class="table-title">WhatsApp outreach</span>
+          <label style="font-size:12px;font-weight:400;text-transform:none;letter-spacing:0;margin:0"><input type="checkbox" id="mk-wa-all" onchange="mkRenderWa()" style="width:auto;margin:0 4px 0 0"> Include shops I already emailed</label>
+        </div>
+        <p id="mk-wa-sub" style="padding:0 1.1rem .6rem;font-size:12px;color:var(--text3);line-height:1.5"></p>
+        <table><thead><tr><th>Business</th><th>Location</th><th>Mobile</th><th>Email?</th><th>Action</th></tr></thead>
+        <tbody id="mk-wa-tbody"></tbody></table>
       </div>
     </div>
 
@@ -2173,7 +2183,9 @@ function mkRenderOutreach() {
   document.getElementById('mk-ostats').innerHTML =
     mkStat(ready, 'Ready for email 1') + mkStat(due, 'Follow-ups due', 'warn') +
     mkStat(mkSent24, 'Sent in last 24h', 'green') + mkStat(mkSuppressed, 'Opted out', 'red');
+  mkRenderWa();
   const s = mkSettings; if (!s) return;
+  const waEl = document.getElementById('mk-wa'); if (waEl) waEl.value = s.wa_template || MK_WA_DEFAULT;
   document.getElementById('mk-enabled').checked = !!s.sending_enabled;
   document.getElementById('mk-cap').value = s.daily_cap;
   document.getElementById('mk-days').value = s.followup_days;
@@ -2189,7 +2201,8 @@ async function mkSaveSettings() {
     daily_cap: Math.max(1, Math.min(100, parseInt(v('mk-cap'), 10) || 20)),
     followup_days: Math.max(1, parseInt(v('mk-days'), 10) || 4),
     from_email: v('mk-from').trim(), reply_to: v('mk-reply').trim(),
-    subject_0: v('mk-s0'), body_0: v('mk-b0'), subject_1: v('mk-s1'), body_1: v('mk-b1') };
+    subject_0: v('mk-s0'), body_0: v('mk-b0'), subject_1: v('mk-s1'), body_1: v('mk-b1'),
+    wa_template: v('mk-wa').trim() || MK_WA_DEFAULT };
   const { error } = await sb.from('marketing_settings').update(upd).eq('id', 1);
   if (error) { showToast('Save failed: ' + error.message); return; }
   mkSettings = { ...mkSettings, ...upd };
@@ -2221,6 +2234,60 @@ function mkWaLink(phone, msg) {
   let d = String(phone || '').replace(/[^\d]/g, ''); if (!d) return '';
   if (d.startsWith('0')) d = '27' + d.slice(1);
   return 'https://wa.me/' + d + '?text=' + encodeURIComponent(msg);
+}
+
+// ── WhatsApp outreach: click-to-chat, you press send in WhatsApp yourself ──
+const MK_WA_DEFAULT = "Hi {{name}}, it's Chevan from Spare Parts Finder (sparepartsfinder.co.za). We list used and new parts for free, and I can upload your first listings if you send photos and prices. Interested? Reply STOP and I won't message you again.";
+
+function mkIsMobile(phone) {
+  let d = String(phone || '').replace(/\D/g, '');
+  if (d.startsWith('27')) d = '0' + d.slice(2);
+  return /^0(6\d|7\d|8[1-5])\d{7}$/.test(d);   // 06x, 07x, 081-085. Not 087 (VoIP) or landlines.
+}
+
+function mkWaMsg(p) {
+  const t = (mkSettings && mkSettings.wa_template) || MK_WA_DEFAULT;
+  const vars = { name: p.business_name || '', type: p.type || 'parts', city: p.city || '' };
+  return t.replace(/\{\{(\w+)\}\}/g, (_, k) => vars[k] ?? '');
+}
+
+function mkRenderWa() {
+  const body = document.getElementById('mk-wa-tbody'); if (!body) return;
+  const incl = document.getElementById('mk-wa-all')?.checked;
+  const mobiles = mkProspects.filter(p => mkIsMobile(p.phone) && ['new', 'contacted'].includes(p.status));
+  const todo = mobiles.filter(p => !p.wa_sent_at && (incl || !p.email));
+  const done = mobiles.filter(p => p.wa_sent_at).length;
+  todo.sort((a, b) => (a.email ? 1 : 0) - (b.email ? 1 : 0));
+  document.getElementById('mk-wa-sub').textContent =
+    `${todo.length} to message · ${done} already messaged. Shops with no email are listed first. The button opens WhatsApp with the message ready; you press send. Shops with an email also get the email unless you skip them.`;
+  body.innerHTML = todo.length ? todo.slice(0, 60).map(p => `<tr>
+    <td><strong>${esc(p.business_name)}</strong></td>
+    <td style="font-size:12px">${esc([p.city, p.province].filter(Boolean).join(', '))}</td>
+    <td class="cell-mono">${esc(p.phone)}</td>
+    <td style="font-size:12px">${p.email ? 'Yes' : '—'}</td>
+    <td><div class="act-row">
+      <button class="btn btn-approve" onclick="mkWaOpen('${p.id}')">Open WhatsApp</button>
+      <button class="btn btn-delete" onclick="mkWaSkip('${p.id}')">Do not contact</button>
+    </div></td></tr>`).join('')
+    : '<tr><td colspan="5" style="text-align:center;padding:1.5rem;color:var(--text3)">No mobile numbers waiting.</td></tr>';
+}
+
+async function mkWaOpen(id) {
+  const p = mkProspects.find(x => x.id === id); if (!p) return;
+  // Open first (synchronously) so the browser doesn't block the popup.
+  window.open(mkWaLink(p.phone, mkWaMsg(p)), '_blank', 'noopener');
+  const when = new Date().toISOString();
+  const { error } = await sb.from('marketing_prospects').update({ wa_sent_at: when }).eq('id', id);
+  if (error) { showToast('Could not mark as messaged: ' + error.message); return; }
+  p.wa_sent_at = when;
+  logAudit('WhatsApp opened', p.business_name);
+  mkRenderWa();
+}
+
+async function mkWaSkip(id) {
+  const p = mkProspects.find(x => x.id === id); if (!p) return;
+  await mkSetStatus(id, 'do_not_contact');
+  mkRenderWa();
 }
 
 function mkRenderActivation() {
