@@ -479,16 +479,28 @@ textarea{resize:vertical;min-height:80px}
           <span class="table-title">Prospect list</span>
           <div class="table-actions">
             <label class="btn btn-primary" style="cursor:pointer">Import CSV<input type="file" accept=".csv" style="display:none" onchange="mkImport(this)"></label>
-            <input class="search-input" placeholder="Search…" oninput="mkSearch=this.value.toLowerCase();mkRenderProspects()">
-            <select class="filter-select" onchange="mkStatus=this.value;mkRenderProspects()">
-              <option value="">All status</option><option value="new">New</option><option value="contacted">Contacted</option>
-              <option value="replied">Replied</option><option value="listed">Listed</option><option value="do_not_contact">Do not contact</option>
-            </select>
+            <input class="search-input" id="mk-f-q" placeholder="Search…" oninput="mkPage=0;mkSearch=this.value.toLowerCase();mkRenderProspects()">
           </div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;padding:0 1.1rem .8rem">
+          <select class="filter-select" id="mk-f-type" onchange="mkPage=0;mkFType=this.value;mkRenderProspects()"></select>
+          <select class="filter-select" id="mk-f-prov" onchange="mkPage=0;mkFProv=this.value;mkFCity='';mkRenderProspects()"></select>
+          <select class="filter-select" id="mk-f-city" onchange="mkPage=0;mkFCity=this.value;mkRenderProspects()"></select>
+          <select class="filter-select" id="mk-f-contact" onchange="mkPage=0;mkFContact=this.value;mkRenderProspects()">
+            <option value="">Any contact</option><option value="email">Has email</option><option value="noemail">No email</option>
+            <option value="mobile">Has mobile (WhatsApp)</option><option value="landline">Landline only</option><option value="web">Has website</option>
+          </select>
+          <select class="filter-select" id="mk-f-status" onchange="mkPage=0;mkStatus=this.value;mkRenderProspects()">
+            <option value="">All status</option><option value="new">New</option><option value="contacted">Contacted</option>
+            <option value="replied">Replied</option><option value="listed">Listed</option><option value="do_not_contact">Do not contact</option>
+          </select>
+          <button class="btn" onclick="mkClearFilters()">Clear</button>
+          <span id="mk-f-count" style="font-size:12px;color:var(--text3)"></span>
         </div>
         <p style="padding:0 1.1rem .8rem;font-size:12px;color:var(--text3)">CSV columns: business_name, type, city, province, website, email, phone, and optionally status, step, notes (use status contacted or replied with step 2 for people you have already spoken to, so they are never auto-emailed). Only add businesses whose contact details are published by the business itself. Rows without an email are kept for manual WhatsApp or phone follow-up.</p>
         <table><thead><tr><th>Business</th><th>Type</th><th>Location</th><th>Email</th><th>Phone</th><th>Status</th><th>Step</th></tr></thead>
         <tbody id="mk-ptbody"><tr><td colspan="7" style="text-align:center;padding:1.5rem;color:var(--text3)">Loading…</td></tr></tbody></table>
+        <div id="mk-pager" style="display:flex;gap:.8rem;align-items:center;justify-content:center;padding:.9rem"></div>
       </div>
     </div>
 
@@ -519,9 +531,19 @@ textarea{resize:vertical;min-height:80px}
           <label>Email 1 body <textarea class="search-input" id="mk-b0" rows="8" style="width:100%"></textarea></label>
           <label>Email 2 subject <input class="search-input" id="mk-s1" style="width:100%"></label>
           <label>Email 2 body <textarea class="search-input" id="mk-b1" rows="6" style="width:100%"></textarea></label>
+          <label>WhatsApp message <textarea class="search-input" id="mk-wa" rows="5" style="width:100%"></textarea></label>
           <div style="font-size:11px;color:var(--text3)">Placeholders: {{name}} {{type}} {{city}}</div>
           <div><button class="btn btn-primary" onclick="mkSaveSettings()">Save settings</button></div>
         </div>
+      </div>
+
+      <div class="table-card" style="margin-top:1rem">
+        <div class="table-hd"><span class="table-title">WhatsApp outreach</span>
+          <label style="font-size:12px;font-weight:400;text-transform:none;letter-spacing:0;margin:0"><input type="checkbox" id="mk-wa-all" onchange="mkRenderWa()" style="width:auto;margin:0 4px 0 0"> Include shops I already emailed</label>
+        </div>
+        <p id="mk-wa-sub" style="padding:0 1.1rem .6rem;font-size:12px;color:var(--text3);line-height:1.5"></p>
+        <table><thead><tr><th>Business</th><th>Location</th><th>Mobile</th><th>Email?</th><th>Action</th></tr></thead>
+        <tbody id="mk-wa-tbody"></tbody></table>
       </div>
     </div>
 
@@ -2052,7 +2074,7 @@ checkAdminSession();
 // ══════════════════════════════════════════════════════════════
 //  MARKETING
 // ══════════════════════════════════════════════════════════════
-let mkProspects = [], mkSettings = null, mkSearch = '', mkStatus = '', mkLoaded = false, mkCounts = {}, mkSuppressed = 0, mkSent24 = 0;
+let mkProspects = [], mkSettings = null, mkSearch = '', mkStatus = '', mkFType = '', mkFProv = '', mkFCity = '', mkFContact = '', mkPage = 0, mkLoaded = false, mkCounts = {}, mkSuppressed = 0, mkSent24 = 0;
 
 // sellers.listing_count is not a real column, so the Listings column always showed 0.
 async function loadSellerListingCounts() {
@@ -2091,14 +2113,36 @@ async function mkLoad() {
 
 function mkStat(n, l, c) { return `<div class="stat-card ${c || ''}"><div class="stat-num">${n}</div><div class="stat-lbl">${l}</div></div>`; }
 
-function mkRenderProspects() {
+function mkRenderProspects(keepPage) {
+  if (keepPage !== true) mkPage = mkPage; 
   const by = k => mkProspects.filter(p => p.status === k).length;
   document.getElementById('mk-pstats').innerHTML =
     mkStat(mkProspects.length, 'Prospects') + mkStat(mkProspects.filter(p => p.email).length, 'With email', 'green') +
     mkStat(by('new'), 'New') + mkStat(by('contacted'), 'Contacted', 'warn') + mkStat(by('listed'), 'Listed', 'green');
-  const rows = mkProspects.filter(p =>
+  const uniq = (arr, f) => [...new Set(arr.map(f).filter(Boolean))].sort((x, y) => x.localeCompare(y));
+  const fill = (id, label, vals, cur) => { const el = document.getElementById(id); if (!el) return;
+    el.innerHTML = `<option value="">${label}</option>` + vals.map(v => `<option value="${esc(v)}"${v === cur ? ' selected' : ''}>${esc(v)}</option>`).join(''); };
+  fill('mk-f-type', 'All types', uniq(mkProspects, p => p.type), mkFType);
+  fill('mk-f-prov', 'All provinces', uniq(mkProspects, p => p.province), mkFProv);
+  fill('mk-f-city', 'All cities', uniq(mkProspects.filter(p => !mkFProv || p.province === mkFProv), p => p.city), mkFCity);
+  const isMob = p => mkIsMobile(p.phone);
+  const matched = mkProspects.filter(p =>
     (!mkStatus || p.status === mkStatus) &&
-    (!mkSearch || [p.business_name, p.city, p.province, p.email, p.type].join(' ').toLowerCase().includes(mkSearch))).slice(0, 300);
+    (!mkFType || p.type === mkFType) && (!mkFProv || p.province === mkFProv) && (!mkFCity || p.city === mkFCity) &&
+    (!mkFContact || (mkFContact === 'email' ? !!p.email : mkFContact === 'noemail' ? !p.email : mkFContact === 'mobile' ? isMob(p) :
+      mkFContact === 'landline' ? (p.phone && !isMob(p)) : !!p.website)) &&
+    (!mkSearch || [p.business_name, p.city, p.province, p.email, p.type].join(' ').toLowerCase().includes(mkSearch)));
+  const PS = 100, pages = Math.max(1, Math.ceil(matched.length / PS));
+  if (mkPage >= pages) mkPage = pages - 1;
+  if (mkPage < 0) mkPage = 0;
+  const rows = matched.slice(mkPage * PS, mkPage * PS + PS);
+  const cnt = document.getElementById('mk-f-count');
+  if (cnt) cnt.textContent = `${matched.length} match${matched.length === 1 ? '' : 'es'}`;
+  const pg = document.getElementById('mk-pager');
+  if (pg) pg.innerHTML = matched.length <= PS ? '' :
+    `<button class="btn" ${mkPage === 0 ? 'disabled' : ''} onclick="mkGoPage(-1)">&larr; Prev</button>
+     <span style="font-size:12px;color:var(--text3)">Page ${mkPage + 1} of ${pages} &middot; ${mkPage * PS + 1}&ndash;${Math.min(matched.length, mkPage * PS + PS)} of ${matched.length}</span>
+     <button class="btn" ${mkPage >= pages - 1 ? 'disabled' : ''} onclick="mkGoPage(1)">Next &rarr;</button>`;
   document.getElementById('mk-ptbody').innerHTML = rows.length ? rows.map(p => `<tr>
     <td><strong>${esc(p.business_name)}</strong><br><span style="font-size:11px;color:var(--text3)">${esc(p.website || '')}</span></td>
     <td>${esc(p.type || '')}</td><td>${esc([p.city, p.province].filter(Boolean).join(', '))}</td>
@@ -2106,6 +2150,15 @@ function mkRenderProspects() {
     <td><select class="filter-select" onchange="mkSetStatus('${p.id}',this.value)">${['new','contacted','replied','listed','do_not_contact'].map(v => `<option value="${v}"${p.status === v ? ' selected' : ''}>${v.replace(/_/g,' ')}</option>`).join('')}</select></td>
     <td style="text-align:center">${p.step}</td></tr>`).join('')
     : '<tr><td colspan="7" style="text-align:center;padding:1.5rem;color:var(--text3)">No prospects yet. Import a CSV.</td></tr>';
+}
+
+function mkGoPage(d) { mkPage += d; mkRenderProspects(true); const t = document.getElementById('mk-ptbody'); if (t) t.closest('.table-card').scrollIntoView({ block: 'start' }); }
+
+function mkClearFilters() {
+  mkPage = 0; mkSearch = ''; mkStatus = ''; mkFType = ''; mkFProv = ''; mkFCity = ''; mkFContact = '';
+  const q = document.getElementById('mk-f-q'); if (q) q.value = '';
+  ['mk-f-contact', 'mk-f-status'].forEach(i => { const e = document.getElementById(i); if (e) e.value = ''; });
+  mkRenderProspects();
 }
 
 async function mkSetStatus(id, status) {
@@ -2173,7 +2226,9 @@ function mkRenderOutreach() {
   document.getElementById('mk-ostats').innerHTML =
     mkStat(ready, 'Ready for email 1') + mkStat(due, 'Follow-ups due', 'warn') +
     mkStat(mkSent24, 'Sent in last 24h', 'green') + mkStat(mkSuppressed, 'Opted out', 'red');
+  mkRenderWa();
   const s = mkSettings; if (!s) return;
+  const waEl = document.getElementById('mk-wa'); if (waEl) waEl.value = s.wa_template || MK_WA_DEFAULT;
   document.getElementById('mk-enabled').checked = !!s.sending_enabled;
   document.getElementById('mk-cap').value = s.daily_cap;
   document.getElementById('mk-days').value = s.followup_days;
@@ -2189,7 +2244,8 @@ async function mkSaveSettings() {
     daily_cap: Math.max(1, Math.min(100, parseInt(v('mk-cap'), 10) || 20)),
     followup_days: Math.max(1, parseInt(v('mk-days'), 10) || 4),
     from_email: v('mk-from').trim(), reply_to: v('mk-reply').trim(),
-    subject_0: v('mk-s0'), body_0: v('mk-b0'), subject_1: v('mk-s1'), body_1: v('mk-b1') };
+    subject_0: v('mk-s0'), body_0: v('mk-b0'), subject_1: v('mk-s1'), body_1: v('mk-b1'),
+    wa_template: v('mk-wa').trim() || MK_WA_DEFAULT };
   const { error } = await sb.from('marketing_settings').update(upd).eq('id', 1);
   if (error) { showToast('Save failed: ' + error.message); return; }
   mkSettings = { ...mkSettings, ...upd };
@@ -2221,6 +2277,60 @@ function mkWaLink(phone, msg) {
   let d = String(phone || '').replace(/[^\d]/g, ''); if (!d) return '';
   if (d.startsWith('0')) d = '27' + d.slice(1);
   return 'https://wa.me/' + d + '?text=' + encodeURIComponent(msg);
+}
+
+// ── WhatsApp outreach: click-to-chat, you press send in WhatsApp yourself ──
+const MK_WA_DEFAULT = "Hi {{name}}, it's Chevan from Spare Parts Finder (sparepartsfinder.co.za). We list used and new parts for free, and I can upload your first listings if you send photos and prices. Interested? Reply STOP and I won't message you again.";
+
+function mkIsMobile(phone) {
+  let d = String(phone || '').replace(/\D/g, '');
+  if (d.startsWith('27')) d = '0' + d.slice(2);
+  return /^0(6\d|7\d|8[1-5])\d{7}$/.test(d);   // 06x, 07x, 081-085. Not 087 (VoIP) or landlines.
+}
+
+function mkWaMsg(p) {
+  const t = (mkSettings && mkSettings.wa_template) || MK_WA_DEFAULT;
+  const vars = { name: p.business_name || '', type: p.type || 'parts', city: p.city || '' };
+  return t.replace(/\{\{(\w+)\}\}/g, (_, k) => vars[k] ?? '');
+}
+
+function mkRenderWa() {
+  const body = document.getElementById('mk-wa-tbody'); if (!body) return;
+  const incl = document.getElementById('mk-wa-all')?.checked;
+  const mobiles = mkProspects.filter(p => mkIsMobile(p.phone) && ['new', 'contacted'].includes(p.status));
+  const todo = mobiles.filter(p => !p.wa_sent_at && (incl || !p.email));
+  const done = mobiles.filter(p => p.wa_sent_at).length;
+  todo.sort((a, b) => (a.email ? 1 : 0) - (b.email ? 1 : 0));
+  document.getElementById('mk-wa-sub').textContent =
+    `${todo.length} to message · ${done} already messaged. Shops with no email are listed first. The button opens WhatsApp with the message ready; you press send. Shops with an email also get the email unless you skip them.`;
+  body.innerHTML = todo.length ? todo.slice(0, 60).map(p => `<tr>
+    <td><strong>${esc(p.business_name)}</strong></td>
+    <td style="font-size:12px">${esc([p.city, p.province].filter(Boolean).join(', '))}</td>
+    <td class="cell-mono">${esc(p.phone)}</td>
+    <td style="font-size:12px">${p.email ? 'Yes' : '—'}</td>
+    <td><div class="act-row">
+      <button class="btn btn-approve" onclick="mkWaOpen('${p.id}')">Open WhatsApp</button>
+      <button class="btn btn-delete" onclick="mkWaSkip('${p.id}')">Do not contact</button>
+    </div></td></tr>`).join('')
+    : '<tr><td colspan="5" style="text-align:center;padding:1.5rem;color:var(--text3)">No mobile numbers waiting.</td></tr>';
+}
+
+async function mkWaOpen(id) {
+  const p = mkProspects.find(x => x.id === id); if (!p) return;
+  // Open first (synchronously) so the browser doesn't block the popup.
+  window.open(mkWaLink(p.phone, mkWaMsg(p)), '_blank', 'noopener');
+  const when = new Date().toISOString();
+  const { error } = await sb.from('marketing_prospects').update({ wa_sent_at: when }).eq('id', id);
+  if (error) { showToast('Could not mark as messaged: ' + error.message); return; }
+  p.wa_sent_at = when;
+  logAudit('WhatsApp opened', p.business_name);
+  mkRenderWa();
+}
+
+async function mkWaSkip(id) {
+  const p = mkProspects.find(x => x.id === id); if (!p) return;
+  await mkSetStatus(id, 'do_not_contact');
+  mkRenderWa();
 }
 
 function mkRenderActivation() {
