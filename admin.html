@@ -694,7 +694,21 @@ textarea{resize:vertical;min-height:80px}
         <div><label>Shop Link (slug)</label><input type="text" id="es-slug" placeholder="my-auto-parts"></div>
       </div>
       <div style="margin-top:8px"><label>Website</label><input type="text" id="es-website" placeholder="https://example.co.za"></div>
-      <div style="margin-top:8px"><label>Logo Image URL</label><input type="text" id="es-logo" placeholder="https://res.cloudinary.com/.../logo.png"></div>
+      <div style="margin-top:8px">
+        <label>Store Logo</label>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+          <div id="es-logo-preview" style="width:72px;height:72px;border-radius:var(--rl);border:1.5px solid var(--border);background:var(--bg);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;font-family:var(--font-h);font-weight:800;color:var(--text3);font-size:12px;letter-spacing:.06em">NO LOGO</div>
+          <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-start">
+            <div style="display:flex;gap:6px">
+              <button type="button" class="btn btn-primary" id="es-logo-btn" onclick="document.getElementById('es-logo-file').click()">⬆ Upload Logo</button>
+              <button type="button" class="btn btn-view" id="es-logo-remove" onclick="removeSellerLogo()" style="display:none">Remove</button>
+            </div>
+            <div style="font-size:11px;color:var(--text3)">PNG, JPG, WEBP or SVG · max 3 MB · square works best</div>
+          </div>
+          <input type="file" id="es-logo-file" accept="image/png,image/jpeg,image/webp,image/svg+xml" style="display:none" onchange="uploadSellerLogo(this.files[0]); this.value=''">
+        </div>
+        <input type="text" id="es-logo" placeholder="…or paste an image URL (https://res.cloudinary.com/.../logo.png)" oninput="updateLogoPreview()">
+      </div>
       <div style="margin-top:8px"><label>Business Address</label><input type="text" id="es-address" placeholder="Street, suburb, city"></div>
       <div style="margin-top:8px"><label>About the Shop</label><textarea id="es-about" rows="3" maxlength="400" placeholder="What they specialise in."></textarea></div>
       <div id="es-warn" style="display:none;margin-top:10px;background:#fff8e6;border:1px solid #ffe0a3;color:#8a5a00;font-size:12px;padding:.6rem .8rem;border-radius:6px;line-height:1.5"></div>
@@ -941,7 +955,65 @@ function openEditSeller(id) {
   v('es-about', s.about);
   const w = document.getElementById('es-warn');
   if (w) { w.style.display = 'none'; w.textContent = ''; }
+  updateLogoPreview();
   document.getElementById('edit-seller-modal').classList.add('open');
+}
+
+// ── Store logo upload (Cloudinary unsigned preset, same as listing photos) ──
+const CLOUDINARY_CLOUD  = 'dnr82g2yo';
+const CLOUDINARY_PRESET = 'spf_unsigned';
+const LOGO_MAX_BYTES    = 3 * 1024 * 1024;
+const LOGO_TYPES        = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'];
+
+function updateLogoPreview() {
+  const url = (document.getElementById('es-logo')?.value || '').trim();
+  const box = document.getElementById('es-logo-preview');
+  const rm  = document.getElementById('es-logo-remove');
+  if (!box) return;
+  box.innerHTML = '';
+  if (/^https?:\/\//i.test(url)) {
+    const img = document.createElement('img');
+    img.src = url; img.alt = 'Logo';
+    img.style.cssText = 'width:100%;height:100%;object-fit:contain';
+    img.onerror = () => { box.textContent = 'BAD URL'; };
+    box.appendChild(img);
+  } else {
+    box.textContent = 'NO LOGO';
+  }
+  if (rm) rm.style.display = url ? '' : 'none';
+}
+
+function removeSellerLogo() {
+  document.getElementById('es-logo').value = '';
+  updateLogoPreview();
+}
+
+async function uploadSellerLogo(file) {
+  if (!file) return;
+  const w = document.getElementById('es-warn');
+  const warn = msg => { if (w) { w.textContent = msg; w.style.display = 'block'; } };
+  if (w) w.style.display = 'none';
+  if (!LOGO_TYPES.includes(file.type)) { warn('Logo must be a PNG, JPG, WEBP or SVG image.'); return; }
+  if (file.size > LOGO_MAX_BYTES) { warn('Logo is too big (' + (file.size/1048576).toFixed(1) + ' MB). Max 3 MB.'); return; }
+
+  const btn = document.getElementById('es-logo-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Uploading…'; }
+  try {
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('upload_preset', CLOUDINARY_PRESET);
+    fd.append('folder', 'spf/logos');
+    const res  = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`, { method: 'POST', body: fd });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.secure_url) throw new Error(data?.error?.message || ('HTTP ' + res.status));
+    document.getElementById('es-logo').value = data.secure_url;
+    updateLogoPreview();
+    showToast('Logo uploaded — click Save Changes to apply.', 'success');
+  } catch (e) {
+    warn('Logo upload failed: ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '⬆ Upload Logo'; }
+  }
 }
 
 function closeEditSeller() {
