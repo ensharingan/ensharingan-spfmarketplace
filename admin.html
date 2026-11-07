@@ -479,12 +479,23 @@ textarea{resize:vertical;min-height:80px}
           <span class="table-title">Prospect list</span>
           <div class="table-actions">
             <label class="btn btn-primary" style="cursor:pointer">Import CSV<input type="file" accept=".csv" style="display:none" onchange="mkImport(this)"></label>
-            <input class="search-input" placeholder="Search…" oninput="mkSearch=this.value.toLowerCase();mkRenderProspects()">
-            <select class="filter-select" onchange="mkStatus=this.value;mkRenderProspects()">
-              <option value="">All status</option><option value="new">New</option><option value="contacted">Contacted</option>
-              <option value="replied">Replied</option><option value="listed">Listed</option><option value="do_not_contact">Do not contact</option>
-            </select>
+            <input class="search-input" id="mk-f-q" placeholder="Search…" oninput="mkSearch=this.value.toLowerCase();mkRenderProspects()">
           </div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;padding:0 1.1rem .8rem">
+          <select class="filter-select" id="mk-f-type" onchange="mkFType=this.value;mkRenderProspects()"></select>
+          <select class="filter-select" id="mk-f-prov" onchange="mkFProv=this.value;mkFCity='';mkRenderProspects()"></select>
+          <select class="filter-select" id="mk-f-city" onchange="mkFCity=this.value;mkRenderProspects()"></select>
+          <select class="filter-select" id="mk-f-contact" onchange="mkFContact=this.value;mkRenderProspects()">
+            <option value="">Any contact</option><option value="email">Has email</option><option value="noemail">No email</option>
+            <option value="mobile">Has mobile (WhatsApp)</option><option value="landline">Landline only</option><option value="web">Has website</option>
+          </select>
+          <select class="filter-select" id="mk-f-status" onchange="mkStatus=this.value;mkRenderProspects()">
+            <option value="">All status</option><option value="new">New</option><option value="contacted">Contacted</option>
+            <option value="replied">Replied</option><option value="listed">Listed</option><option value="do_not_contact">Do not contact</option>
+          </select>
+          <button class="btn" onclick="mkClearFilters()">Clear</button>
+          <span id="mk-f-count" style="font-size:12px;color:var(--text3)"></span>
         </div>
         <p style="padding:0 1.1rem .8rem;font-size:12px;color:var(--text3)">CSV columns: business_name, type, city, province, website, email, phone, and optionally status, step, notes (use status contacted or replied with step 2 for people you have already spoken to, so they are never auto-emailed). Only add businesses whose contact details are published by the business itself. Rows without an email are kept for manual WhatsApp or phone follow-up.</p>
         <table><thead><tr><th>Business</th><th>Type</th><th>Location</th><th>Email</th><th>Phone</th><th>Status</th><th>Step</th></tr></thead>
@@ -2062,7 +2073,7 @@ checkAdminSession();
 // ══════════════════════════════════════════════════════════════
 //  MARKETING
 // ══════════════════════════════════════════════════════════════
-let mkProspects = [], mkSettings = null, mkSearch = '', mkStatus = '', mkLoaded = false, mkCounts = {}, mkSuppressed = 0, mkSent24 = 0;
+let mkProspects = [], mkSettings = null, mkSearch = '', mkStatus = '', mkFType = '', mkFProv = '', mkFCity = '', mkFContact = '', mkLoaded = false, mkCounts = {}, mkSuppressed = 0, mkSent24 = 0;
 
 // sellers.listing_count is not a real column, so the Listings column always showed 0.
 async function loadSellerListingCounts() {
@@ -2106,9 +2117,22 @@ function mkRenderProspects() {
   document.getElementById('mk-pstats').innerHTML =
     mkStat(mkProspects.length, 'Prospects') + mkStat(mkProspects.filter(p => p.email).length, 'With email', 'green') +
     mkStat(by('new'), 'New') + mkStat(by('contacted'), 'Contacted', 'warn') + mkStat(by('listed'), 'Listed', 'green');
-  const rows = mkProspects.filter(p =>
+  const uniq = (arr, f) => [...new Set(arr.map(f).filter(Boolean))].sort((x, y) => x.localeCompare(y));
+  const fill = (id, label, vals, cur) => { const el = document.getElementById(id); if (!el) return;
+    el.innerHTML = `<option value="">${label}</option>` + vals.map(v => `<option value="${esc(v)}"${v === cur ? ' selected' : ''}>${esc(v)}</option>`).join(''); };
+  fill('mk-f-type', 'All types', uniq(mkProspects, p => p.type), mkFType);
+  fill('mk-f-prov', 'All provinces', uniq(mkProspects, p => p.province), mkFProv);
+  fill('mk-f-city', 'All cities', uniq(mkProspects.filter(p => !mkFProv || p.province === mkFProv), p => p.city), mkFCity);
+  const isMob = p => mkIsMobile(p.phone);
+  const matched = mkProspects.filter(p =>
     (!mkStatus || p.status === mkStatus) &&
-    (!mkSearch || [p.business_name, p.city, p.province, p.email, p.type].join(' ').toLowerCase().includes(mkSearch))).slice(0, 300);
+    (!mkFType || p.type === mkFType) && (!mkFProv || p.province === mkFProv) && (!mkFCity || p.city === mkFCity) &&
+    (!mkFContact || (mkFContact === 'email' ? !!p.email : mkFContact === 'noemail' ? !p.email : mkFContact === 'mobile' ? isMob(p) :
+      mkFContact === 'landline' ? (p.phone && !isMob(p)) : !!p.website)) &&
+    (!mkSearch || [p.business_name, p.city, p.province, p.email, p.type].join(' ').toLowerCase().includes(mkSearch)));
+  const rows = matched.slice(0, 500);
+  const cnt = document.getElementById('mk-f-count');
+  if (cnt) cnt.textContent = `${matched.length} match${matched.length > 500 ? ' (showing 500)' : ''}`;
   document.getElementById('mk-ptbody').innerHTML = rows.length ? rows.map(p => `<tr>
     <td><strong>${esc(p.business_name)}</strong><br><span style="font-size:11px;color:var(--text3)">${esc(p.website || '')}</span></td>
     <td>${esc(p.type || '')}</td><td>${esc([p.city, p.province].filter(Boolean).join(', '))}</td>
@@ -2116,6 +2140,13 @@ function mkRenderProspects() {
     <td><select class="filter-select" onchange="mkSetStatus('${p.id}',this.value)">${['new','contacted','replied','listed','do_not_contact'].map(v => `<option value="${v}"${p.status === v ? ' selected' : ''}>${v.replace(/_/g,' ')}</option>`).join('')}</select></td>
     <td style="text-align:center">${p.step}</td></tr>`).join('')
     : '<tr><td colspan="7" style="text-align:center;padding:1.5rem;color:var(--text3)">No prospects yet. Import a CSV.</td></tr>';
+}
+
+function mkClearFilters() {
+  mkSearch = ''; mkStatus = ''; mkFType = ''; mkFProv = ''; mkFCity = ''; mkFContact = '';
+  const q = document.getElementById('mk-f-q'); if (q) q.value = '';
+  ['mk-f-contact', 'mk-f-status'].forEach(i => { const e = document.getElementById(i); if (e) e.value = ''; });
+  mkRenderProspects();
 }
 
 async function mkSetStatus(id, status) {
