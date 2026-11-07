@@ -479,18 +479,18 @@ textarea{resize:vertical;min-height:80px}
           <span class="table-title">Prospect list</span>
           <div class="table-actions">
             <label class="btn btn-primary" style="cursor:pointer">Import CSV<input type="file" accept=".csv" style="display:none" onchange="mkImport(this)"></label>
-            <input class="search-input" id="mk-f-q" placeholder="Search…" oninput="mkSearch=this.value.toLowerCase();mkRenderProspects()">
+            <input class="search-input" id="mk-f-q" placeholder="Search…" oninput="mkPage=0;mkSearch=this.value.toLowerCase();mkRenderProspects()">
           </div>
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;padding:0 1.1rem .8rem">
-          <select class="filter-select" id="mk-f-type" onchange="mkFType=this.value;mkRenderProspects()"></select>
-          <select class="filter-select" id="mk-f-prov" onchange="mkFProv=this.value;mkFCity='';mkRenderProspects()"></select>
-          <select class="filter-select" id="mk-f-city" onchange="mkFCity=this.value;mkRenderProspects()"></select>
-          <select class="filter-select" id="mk-f-contact" onchange="mkFContact=this.value;mkRenderProspects()">
+          <select class="filter-select" id="mk-f-type" onchange="mkPage=0;mkFType=this.value;mkRenderProspects()"></select>
+          <select class="filter-select" id="mk-f-prov" onchange="mkPage=0;mkFProv=this.value;mkFCity='';mkRenderProspects()"></select>
+          <select class="filter-select" id="mk-f-city" onchange="mkPage=0;mkFCity=this.value;mkRenderProspects()"></select>
+          <select class="filter-select" id="mk-f-contact" onchange="mkPage=0;mkFContact=this.value;mkRenderProspects()">
             <option value="">Any contact</option><option value="email">Has email</option><option value="noemail">No email</option>
             <option value="mobile">Has mobile (WhatsApp)</option><option value="landline">Landline only</option><option value="web">Has website</option>
           </select>
-          <select class="filter-select" id="mk-f-status" onchange="mkStatus=this.value;mkRenderProspects()">
+          <select class="filter-select" id="mk-f-status" onchange="mkPage=0;mkStatus=this.value;mkRenderProspects()">
             <option value="">All status</option><option value="new">New</option><option value="contacted">Contacted</option>
             <option value="replied">Replied</option><option value="listed">Listed</option><option value="do_not_contact">Do not contact</option>
           </select>
@@ -500,6 +500,7 @@ textarea{resize:vertical;min-height:80px}
         <p style="padding:0 1.1rem .8rem;font-size:12px;color:var(--text3)">CSV columns: business_name, type, city, province, website, email, phone, and optionally status, step, notes (use status contacted or replied with step 2 for people you have already spoken to, so they are never auto-emailed). Only add businesses whose contact details are published by the business itself. Rows without an email are kept for manual WhatsApp or phone follow-up.</p>
         <table><thead><tr><th>Business</th><th>Type</th><th>Location</th><th>Email</th><th>Phone</th><th>Status</th><th>Step</th></tr></thead>
         <tbody id="mk-ptbody"><tr><td colspan="7" style="text-align:center;padding:1.5rem;color:var(--text3)">Loading…</td></tr></tbody></table>
+        <div id="mk-pager" style="display:flex;gap:.8rem;align-items:center;justify-content:center;padding:.9rem"></div>
       </div>
     </div>
 
@@ -2073,7 +2074,7 @@ checkAdminSession();
 // ══════════════════════════════════════════════════════════════
 //  MARKETING
 // ══════════════════════════════════════════════════════════════
-let mkProspects = [], mkSettings = null, mkSearch = '', mkStatus = '', mkFType = '', mkFProv = '', mkFCity = '', mkFContact = '', mkLoaded = false, mkCounts = {}, mkSuppressed = 0, mkSent24 = 0;
+let mkProspects = [], mkSettings = null, mkSearch = '', mkStatus = '', mkFType = '', mkFProv = '', mkFCity = '', mkFContact = '', mkPage = 0, mkLoaded = false, mkCounts = {}, mkSuppressed = 0, mkSent24 = 0;
 
 // sellers.listing_count is not a real column, so the Listings column always showed 0.
 async function loadSellerListingCounts() {
@@ -2112,7 +2113,8 @@ async function mkLoad() {
 
 function mkStat(n, l, c) { return `<div class="stat-card ${c || ''}"><div class="stat-num">${n}</div><div class="stat-lbl">${l}</div></div>`; }
 
-function mkRenderProspects() {
+function mkRenderProspects(keepPage) {
+  if (keepPage !== true) mkPage = mkPage; 
   const by = k => mkProspects.filter(p => p.status === k).length;
   document.getElementById('mk-pstats').innerHTML =
     mkStat(mkProspects.length, 'Prospects') + mkStat(mkProspects.filter(p => p.email).length, 'With email', 'green') +
@@ -2130,9 +2132,17 @@ function mkRenderProspects() {
     (!mkFContact || (mkFContact === 'email' ? !!p.email : mkFContact === 'noemail' ? !p.email : mkFContact === 'mobile' ? isMob(p) :
       mkFContact === 'landline' ? (p.phone && !isMob(p)) : !!p.website)) &&
     (!mkSearch || [p.business_name, p.city, p.province, p.email, p.type].join(' ').toLowerCase().includes(mkSearch)));
-  const rows = matched.slice(0, 500);
+  const PS = 100, pages = Math.max(1, Math.ceil(matched.length / PS));
+  if (mkPage >= pages) mkPage = pages - 1;
+  if (mkPage < 0) mkPage = 0;
+  const rows = matched.slice(mkPage * PS, mkPage * PS + PS);
   const cnt = document.getElementById('mk-f-count');
-  if (cnt) cnt.textContent = `${matched.length} match${matched.length > 500 ? ' (showing 500)' : ''}`;
+  if (cnt) cnt.textContent = `${matched.length} match${matched.length === 1 ? '' : 'es'}`;
+  const pg = document.getElementById('mk-pager');
+  if (pg) pg.innerHTML = matched.length <= PS ? '' :
+    `<button class="btn" ${mkPage === 0 ? 'disabled' : ''} onclick="mkGoPage(-1)">&larr; Prev</button>
+     <span style="font-size:12px;color:var(--text3)">Page ${mkPage + 1} of ${pages} &middot; ${mkPage * PS + 1}&ndash;${Math.min(matched.length, mkPage * PS + PS)} of ${matched.length}</span>
+     <button class="btn" ${mkPage >= pages - 1 ? 'disabled' : ''} onclick="mkGoPage(1)">Next &rarr;</button>`;
   document.getElementById('mk-ptbody').innerHTML = rows.length ? rows.map(p => `<tr>
     <td><strong>${esc(p.business_name)}</strong><br><span style="font-size:11px;color:var(--text3)">${esc(p.website || '')}</span></td>
     <td>${esc(p.type || '')}</td><td>${esc([p.city, p.province].filter(Boolean).join(', '))}</td>
@@ -2142,8 +2152,10 @@ function mkRenderProspects() {
     : '<tr><td colspan="7" style="text-align:center;padding:1.5rem;color:var(--text3)">No prospects yet. Import a CSV.</td></tr>';
 }
 
+function mkGoPage(d) { mkPage += d; mkRenderProspects(true); const t = document.getElementById('mk-ptbody'); if (t) t.closest('.table-card').scrollIntoView({ block: 'start' }); }
+
 function mkClearFilters() {
-  mkSearch = ''; mkStatus = ''; mkFType = ''; mkFProv = ''; mkFCity = ''; mkFContact = '';
+  mkPage = 0; mkSearch = ''; mkStatus = ''; mkFType = ''; mkFProv = ''; mkFCity = ''; mkFContact = '';
   const q = document.getElementById('mk-f-q'); if (q) q.value = '';
   ['mk-f-contact', 'mk-f-status'].forEach(i => { const e = document.getElementById(i); if (e) e.value = ''; });
   mkRenderProspects();
